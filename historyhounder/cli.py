@@ -15,10 +15,58 @@ from historyhounder.pipeline import extract_and_process_history
 from historyhounder.search import semantic_search, llm_qa_search
 
 
+def validate_file_path(file_path):
+    """
+    Validate file path to prevent path traversal attacks.
+    Returns True if path is safe, False otherwise.
+    """
+    if not file_path or not isinstance(file_path, str):
+        return False
+    
+    # Check for path traversal attempts in the original path
+    if '..' in file_path:
+        return False
+    
+    # Normalize the path to resolve any .. or . components
+    try:
+        normalized_path = os.path.normpath(file_path)
+        absolute_path = os.path.abspath(normalized_path)
+    except Exception:
+        return False
+    
+    # Reject absolute paths that could access system files
+    # Allow only relative paths or paths in safe directories
+    if file_path.startswith('/'):
+        # Check if it's in a temporary directory
+        temp_dirs = ['/tmp', '/var/tmp', '/private/tmp', '/var/folders']
+        user_home = os.path.expanduser('~')
+        
+        is_temp = any(absolute_path.startswith(temp_dir) for temp_dir in temp_dirs)
+        is_user_home = absolute_path.startswith(user_home)
+        
+        if not (is_temp or is_user_home):
+            return False
+    
+    # Check for Windows-style paths with colons (except drive letters)
+    if ':' in file_path and not (len(file_path) >= 2 and file_path[1] == ':' and file_path[0].isalpha()):
+        return False
+    
+    # Ensure the file exists and is accessible
+    if not os.path.exists(absolute_path):
+        return False
+    
+    # Check if it's a file (not a directory)
+    if not os.path.isfile(absolute_path):
+        return False
+    
+    return True
+
+
 def extract_command(args):
     browsers = available_browsers()
     browser = args.browser
     db_path = args.db_path
+    
     if not db_path:
         if browser:
             if browser in browsers:
@@ -42,15 +90,21 @@ def extract_command(args):
             except (ValueError, IndexError):
                 print("Invalid selection.")
                 return
-    if not os.path.exists(db_path):
-        print(f"History file not found: {db_path}")
+    
+    # Validate the database path to prevent path traversal
+    if not validate_file_path(db_path):
+        print(f"Error: Invalid or unsafe database path: {db_path}")
+        print("Please provide a valid path to a browser history database file.")
         return
+    
     # Parse comma-separated ignore values
     ignore_domains = parse_comma_separated_values(args.ignore_domain) if args.ignore_domain else []
     ignore_patterns = parse_comma_separated_values(args.ignore_pattern) if args.ignore_pattern else []
+    
     def progress(msg):
         print(msg)
-    print(f"[DEBUG] extract_command: Using Chroma persist_directory: {args.chroma_dir}")
+    
+    # Remove debug information to prevent information disclosure
     result = extract_and_process_history(
         browser=browser,
         db_path=db_path,
@@ -64,9 +118,11 @@ def extract_command(args):
         persist_directory=args.chroma_dir,
         url_limit=args.url_limit
     )
+    
     if result['status'] == 'no_history':
         print("No history found for the given criteria.")
         return
+    
     if args.embed:
         print(f"Stored {result.get('num_embedded', 0)} documents in Chroma.")
     else:
@@ -86,7 +142,7 @@ def search_command(args):
         for i, src in enumerate(result['sources'], 1):
             print(f"[{i}] {src[:200]}{'...' if len(src) > 200 else ''}")
     else:
-        print(f"[DEBUG] search_command: Using Chroma persist_directory: {args.chroma_dir}")
+        # Remove debug information to prevent information disclosure
         results = semantic_search(args.query, top_k=args.top_k, embedder_backend=args.embedder, persist_directory=args.chroma_dir)
         print(json.dumps(results, indent=2))
 
