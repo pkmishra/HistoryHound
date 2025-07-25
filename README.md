@@ -58,6 +58,15 @@ HistoryHounder follows a modular, loosely-coupled architecture with clear separa
 - **No business logic**: All core functionality delegated to modules
 - **Error handling**: User-friendly error messages and validation
 
+#### 8. **Backend Server**
+- **`server.py`**: FastAPI server for browser extension integration
+- **OpenAPI Specification**: Automatic API documentation with Swagger UI and ReDoc
+- **Pydantic Models**: Type-safe request/response validation
+- **CORS Support**: Full cross-origin support for browser extensions
+- **RESTful API**: Clean endpoints for search, Q&A, and history processing
+- **Error Handling**: Proper HTTP status codes and JSON responses
+- **Async Support**: High-performance async/await patterns
+
 ### Data Flow
 
 ```
@@ -278,6 +287,84 @@ uv run python -m historyhounder.cli search --query "What was that article I read
 ```
 
 - You can change `--llm-model` to any model available in your Ollama installation (e.g., `mistral`, `llama2`, etc.)
+
+### **Backend Server for Browser Extension**
+Start the backend server to enable browser extension integration:
+```sh
+# Start server on default port (8080)
+uv run python -m historyhounder.cli server
+
+# Start server on custom port
+uv run python -m historyhounder.cli server --port 9000
+
+# Start server on all interfaces (for remote access)
+uv run python -m historyhounder.cli server --host 0.0.0.0 --port 8080
+
+# Alternative: Run server directly
+uv run python -m historyhounder.server --port 8080
+
+# Configure Ollama model (default: llama3.2:latest)
+HISTORYHOUNDER_OLLAMA_MODEL=llama3.2:latest uv run python -m historyhounder.server --port 8080
+```
+
+The server provides RESTful API endpoints for:
+- **Health Check**: `GET /api/health`
+- **Semantic Search**: `GET /api/search?q=query`
+- **AI Q&A**: `POST /api/qa`
+- **History Processing**: `POST /api/process-history`
+- **Statistics**: `GET /api/stats`
+
+**API Documentation**:
+- **Swagger UI**: `http://localhost:8080/docs`
+- **ReDoc**: `http://localhost:8080/redoc`
+- **OpenAPI JSON**: `http://localhost:8080/openapi.json`
+
+### **Ollama Model Configuration**
+
+The server uses Ollama for AI Q&A functionality. You can configure the model using environment variables:
+
+```bash
+# Use default model (llama3.2:latest)
+uv run python -m historyhounder.server --port 8080
+
+# Use a specific model
+HISTORYHOUNDER_OLLAMA_MODEL=llama3.2:latest uv run python -m historyhounder.server --port 8080
+
+# Use a different model
+HISTORYHOUNDER_OLLAMA_MODEL=llama3.1:latest uv run python -m historyhounder.server --port 8080
+
+# Use a custom model
+HISTORYHOUNDER_OLLAMA_MODEL=my-custom-model uv run python -m historyhounder.server --port 8080
+```
+
+**Available Models**:
+- `llama3.2:latest` (default) - Latest Llama 3.2 model
+- `llama3.1:latest` - Llama 3.1 model
+- `llama3:latest` - Llama 3 model
+- Any other model available in your Ollama installation
+
+**Check Current Model**:
+```bash
+curl http://localhost:8080/api/health
+```
+
+**Get Model Information**:
+```bash
+curl http://localhost:8080/api/ollama/model
+```
+
+### **Browser Extension Integration**
+The backend server enables the HistoryHounder browser extension to:
+- Perform semantic search on your browser history
+- Ask AI questions about your browsing patterns
+- Process and sync history data
+- Access enhanced features through the extension UI
+
+- The browser extension now ensures that only the required fields (`id`, `url`, `title`, `lastVisitTime`, `visitCount`) are sent to the backend when syncing history. This prevents 422 Unprocessable Entity errors from the FastAPI backend.
+
+### Troubleshooting
+
+- **422 Unprocessable Entity Error on /api/process-history**: This error means the request body did not match the expected schema. Make sure the extension is up to date and only sends the required fields with the correct types. See the extension's README for more details.
 
 ---
 

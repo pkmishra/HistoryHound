@@ -9,4 +9,7 @@ langchain
 langchain-ollama
 langchain-huggingface
 langchain-chroma
-yt-dlp 
+yt-dlp
+fastapi
+uvicorn[standard]
+pydantic 

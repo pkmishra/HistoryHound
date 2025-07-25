@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .test-result {
+            background: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>HistoryHounder Extension Test</h1>
+    <p>This page helps you test if the HistoryHounder extension is working correctly.</p>
+
+    <div class="test-section">
+        <h2>1. Extension Detection</h2>
+        <button onclick="testExtensionDetection()">Test Extension Detection</button>
+        <div id="detection-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Content Script Test</h2>
+        <p>If the extension is working, you should see a HistoryHounder button in the top-right corner of this page.</p>
+        <button onclick="testContentScript()">Test Content Script</button>
+        <div id="content-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Background Script Test</h2>
+        <button onclick="testBackgroundScript()">Test Background Script</button>
+        <div id="background-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Storage Test</h2>
+        <button onclick="testStorage()">Test Storage</button>
+        <div id="storage-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. History Access Test</h2>
+        <button onclick="testHistoryAccess()">Test History Access</button>
+        <div id="history-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Settings Test</h2>
+        <button onclick="testSettings()">Test Settings</button>
+        <div id="settings-result"></div>
+    </div>
+
+    <script src="test_extension.js"></script>
+    <script>
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="test-result ${type}">${message}</div>`;
+        }
+
+        function testExtensionDetection() {
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                showResult('detection-result', 
+                    `<strong>✅ Extension detected!</strong><br>
+                    Extension ID: ${chrome.runtime.id}<br>
+                    Manifest version: ${chrome.runtime.getManifest().manifest_version}`, 'success');
+            } else {
+                showResult('detection-result', 
+                    '<strong>❌ Extension not detected</strong><br>Make sure the extension is loaded in developer mode.', 'error');
+            }
+        }
+
+        function testContentScript() {
+            const button = document.getElementById('historyhounder-button');
+            if (button) {
+                showResult('content-result', 
+                    '<strong>✅ Content script working!</strong><br>The HistoryHounder button is visible on this page.', 'success');
+            } else {
+                showResult('content-result', 
+                    '<strong>❌ Content script not working</strong><br>Check if content.js is properly loaded.', 'error');
+            }
+        }
+
+        function testBackgroundScript() {
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage({action: 'getHistoryStats', filters: {}}, (response) => {
+                    if (response && response.success) {
+                        showResult('background-result', 
+                            `<strong>✅ Background script working!</strong><br>
+                            Total history items: ${response.stats.total}<br>
+                            Unique domains: ${Object.keys(response.stats.domains).length}`, 'success');
+                    } else {
+                        showResult('background-result', 
+                            '<strong>❌ Background script error</strong><br>' + (response?.error || 'No response'), 'error');
+                    }
+                });
+            } else {
+                showResult('background-result', 
+                    '<strong>❌ Chrome runtime not available</strong>', 'error');
+            }
+        }
+
+        function testStorage() {
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.sync.set({testKey: 'testValue'}, () => {
+                    chrome.storage.sync.get(['testKey'], (result) => {
+                        if (result.testKey === 'testValue') {
+                            chrome.storage.sync.remove(['testKey'], () => {
+                                showResult('storage-result', 
+                                    '<strong>✅ Storage working!</strong><br>Sync storage is functioning correctly.', 'success');
+                            });
+                        } else {
+                            showResult('storage-result', 
+                                '<strong>❌ Storage test failed</strong>', 'error');
+                        }
+                    });
+                });
+            } else {
+                showResult('storage-result', 
+                    '<strong>❌ Chrome storage not available</strong>', 'error');
+            }
+        }
+
+        function testHistoryAccess() {
+            if (typeof chrome !== 'undefined' && chrome.history) {
+                chrome.history.search({
+                    text: '',
+                    maxResults: 5
+                }, (results) => {
+                    if (results && results.length > 0) {
+                        showResult('history-result', 
+                            `<strong>✅ History access working!</strong><br>
+                            Found ${results.length} history items.<br>
+                            Latest: ${results[0].title || 'Untitled'}`, 'success');
+                    } else {
+                        showResult('history-result', 
+                            '<strong>⚠️ History access working but no items found</strong><br>This is normal if you have no browser history.', 'info');
+                    }
+                });
+            } else {
+                showResult('history-result', 
+                    '<strong>❌ History API not available</strong><br>Check if history permission is granted.', 'error');
+            }
+        }
+
+        function testSettings() {
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.sync.get(['defaultDaysFilter', 'maxResults'], (result) => {
+                    showResult('settings-result', 
+                        `<strong>✅ Settings working!</strong><br>
+                        Default days filter: ${result.defaultDaysFilter || 'Not set'}<br>
+                        Max results: ${result.maxResults || 'Not set'}`, 'success');
+                });
+            } else {
+                showResult('settings-result', 
+                    '<strong>❌ Settings not available</strong>', 'error');
+            }
+        }
+
+        // Auto-run detection test on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testExtensionDetection, 1000);
+        });
+    </script>
+</body>
+</html> 

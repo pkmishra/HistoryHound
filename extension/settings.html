@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .settings-section h2 {
+            color: #007bff;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .setting-group input,
+        .setting-group select,
+        .setting-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .setting-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .setting-group .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HistoryHounder Settings</h1>
+            <p>Configure your browser history search and AI preferences</p>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <!-- Search Settings -->
+        <div class="settings-section">
+            <h2>Search Settings</h2>
+            
+            <div class="setting-group">
+                <label for="defaultDaysFilter">Default Time Range:</label>
+                <select id="defaultDaysFilter">
+                    <option value="">All time</option>
+                    <option value="1">Last 24 hours</option>
+                    <option value="7">Last 7 days</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+                <div class="help-text">Set the default time range for history searches</div>
+            </div>
+
+            <div class="setting-group">
+                <label for="ignoreDomains">Domains to Ignore:</label>
+                <textarea id="ignoreDomains" placeholder="Enter domains to exclude from searches (one per line or comma-separated)&#10;Example:&#10;google.com&#10;facebook.com&#10;youtube.com"></textarea>
+                <div class="help-text">These domains will be excluded from search results</div>
+            </div>
+
+            <div class="setting-group">
+                <label for="maxResults">Maximum Results:</label>
+                <select id="maxResults">
+                    <option value="10">10 results</option>
+                    <option value="25">25 results</option>
+                    <option value="50">50 results</option>
+                    <option value="100">100 results</option>
+                </select>
+                <div class="help-text">Maximum number of results to display</div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeVisits">
+                <label for="includeVisits">Show visit count in results</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="autoSearch">
+                <label for="autoSearch">Auto-search when popup opens</label>
+            </div>
+        </div>
+
+        <!-- HistoryHounder Backend Settings -->
+        <div class="settings-section">
+            <h2>HistoryHounder Backend</h2>
+            
+            <div class="setting-group">
+                <label for="backendUrl">Backend URL:</label>
+                <input type="url" id="backendUrl" placeholder="http://localhost:8080" value="http://localhost:8080">
+                <div class="help-text">URL of the HistoryHounder backend server</div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="useSemanticSearch" checked>
+                <label for="useSemanticSearch">Use semantic search (HistoryHounder backend)</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="enableQa" checked>
+                <label for="enableQa">Enable AI Q&A (requires backend)</label>
+            </div>
+
+            <div class="setting-group">
+                <label for="maxContext">Maximum Context Items:</label>
+                <select id="maxContext">
+                    <option value="5">5 items</option>
+                    <option value="10">10 items</option>
+                    <option value="20">20 items</option>
+                    <option value="50">50 items</option>
+                </select>
+                <div class="help-text">Number of history items to include as context for AI questions</div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-secondary" id="testBackend">Test Backend Connection</button>
+                <button class="btn btn-secondary" id="syncHistory">Sync History to Backend</button>
+            </div>
+        </div>
+
+        <!-- Privacy Settings -->
+        <div class="settings-section">
+            <h2>Privacy & Security</h2>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="cacheHistory">
+                <label for="cacheHistory">Cache history data for performance</label>
+            </div>
+
+            <div class="setting-group">
+                <label for="cacheDuration">Cache Duration (minutes):</label>
+                <select id="cacheDuration">
+                    <option value="1">1 minute</option>
+                    <option value="5">5 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                </select>
+                <div class="help-text">How long to cache history data before refreshing</div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="analytics">
+                <label for="analytics">Allow anonymous usage analytics (optional)</label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="debugMode">
+                <label for="debugMode">Enable debug mode</label>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="settings-section">
+            <h2>Your History Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVisits">-</div>
+                    <div class="stat-label">Total Visits</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="uniqueDomains">-</div>
+                    <div class="stat-label">Unique Domains</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayVisits">-</div>
+                    <div class="stat-label">Today's Visits</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="weekVisits">-</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="settings-section">
+            <h2>Actions</h2>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" id="saveSettings">Save Settings</button>
+                <button class="btn btn-secondary" id="resetSettings">Reset to Defaults</button>
+                <button class="btn btn-secondary" id="exportSettings">Export Settings</button>
+                <button class="btn btn-secondary" id="importSettings">Import Settings</button>
+                <button class="btn btn-danger" id="clearCache">Clear Cache</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html> 

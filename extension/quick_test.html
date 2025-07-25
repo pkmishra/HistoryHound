@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Quick Extension Test</h1>
+    <p>Testing the fixed Chrome history API calls...</p>
+    
+    <button onclick="testHistoryStats()">Test History Stats</button>
+    <button onclick="testHistorySearch()">Test History Search</button>
+    <button onclick="testEmptySearch()">Test Empty Search</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function showResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testHistoryStats() {
+            clearResults();
+            showResult('Testing history stats...', 'info');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'getHistoryStats',
+                    filters: {}
+                });
+                
+                if (response && response.success) {
+                    showResult(`
+                        <strong>✅ History Stats Working!</strong><br>
+                        Total visits: ${response.stats.total}<br>
+                        Unique domains: ${Object.keys(response.stats.domains).length}<br>
+                        Today's visits: ${response.stats.timeRanges.today}<br>
+                        This week: ${response.stats.timeRanges.week}
+                    `, 'success');
+                } else {
+                    showResult(`❌ History Stats Error: ${response?.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ History Stats Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHistorySearch() {
+            clearResults();
+            showResult('Testing history search with query "google"...', 'info');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'searchHistory',
+                    query: 'google',
+                    filters: {}
+                });
+                
+                if (response && response.success) {
+                    showResult(`
+                        <strong>✅ History Search Working!</strong><br>
+                        Found ${response.results.length} results for "google"<br>
+                        ${response.results.length > 0 ? `First result: ${response.results[0].title || 'Untitled'}` : 'No results found'}
+                    `, 'success');
+                } else {
+                    showResult(`❌ History Search Error: ${response?.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ History Search Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function testEmptySearch() {
+            clearResults();
+            showResult('Testing empty history search...', 'info');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'searchHistory',
+                    query: '',
+                    filters: {}
+                });
+                
+                if (response && response.success) {
+                    showResult(`
+                        <strong>✅ Empty Search Working!</strong><br>
+                        Found ${response.results.length} recent history items<br>
+                        ${response.results.length > 0 ? `Most recent: ${response.results[0].title || 'Untitled'}` : 'No history found'}
+                    `, 'success');
+                } else {
+                    showResult(`❌ Empty Search Error: ${response?.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Empty Search Exception: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run basic test on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                showResult('Extension loaded. Click buttons above to test functionality.', 'info');
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

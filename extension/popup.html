@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">HistoryHounder</h1>
+            <p class="subtitle">Chat with your browser history</p>
+        </header>
+
+        <div class="main-content">
+            <div class="search-section">
+                <div class="input-group">
+                    <input type="text" id="searchInput" placeholder="Ask about your browsing history..." class="search-input">
+                    <button id="searchBtn" class="search-btn">Search</button>
+                </div>
+            </div>
+
+            <div class="filters-section">
+                <div class="filter-group">
+                    <label for="daysFilter">Days back:</label>
+                    <select id="daysFilter" class="filter-select">
+                        <option value="">All time</option>
+                        <option value="1">Last 24 hours</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="ignoreDomains">Ignore domains:</label>
+                    <input type="text" id="ignoreDomains" placeholder="google.com, facebook.com" class="filter-input">
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Searching your history...</p>
+                </div>
+                
+                <div id="results" class="results hidden">
+                    <h3>Search Results</h3>
+                    <div id="resultsList" class="results-list"></div>
+                </div>
+
+                <div id="qa-section" class="qa-section hidden">
+                    <h3>AI Q&A</h3>
+                    <div id="qaInput" class="qa-input-group">
+                        <input type="text" id="questionInput" placeholder="Ask a question about your history..." class="question-input">
+                        <button id="askBtn" class="ask-btn">Ask</button>
+                    </div>
+                    <div id="qaResult" class="qa-result"></div>
+                </div>
+
+                <div id="error" class="error hidden">
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <button id="settingsBtn" class="settings-btn">Settings</button>
+            <button id="helpBtn" class="help-btn">Help</button>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 

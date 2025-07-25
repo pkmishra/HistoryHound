@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Extension Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 HistoryHounder Extension Integration Test</h1>
+        <p>This page tests the integration between the browser extension and the FastAPI backend server.</p>
+        
+        <div id="connectionStatus" class="status disconnected">
+            ❌ Backend server not connected
+        </div>
+        
+        <div class="test-section">
+            <h3>1. Health Check</h3>
+            <p>Test basic connectivity to the backend server.</p>
+            <button onclick="testHealth()">Test Health Endpoint</button>
+            <div id="healthResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Search Test</h3>
+            <p>Test semantic search functionality (simulates extension search).</p>
+            <input type="text" id="searchQuery" placeholder="Enter search query (e.g., 'test')" value="test">
+            <button onclick="testSearch()">Test Search</button>
+            <div id="searchResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Q&A Test</h3>
+            <p>Test AI Q&A functionality (simulates extension Q&A).</p>
+            <input type="text" id="questionQuery" placeholder="Enter question (e.g., 'What websites did I visit?')" value="What websites did I visit?">
+            <button onclick="testQA()">Test Q&A</button>
+            <div id="qaResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. History Processing Test</h3>
+            <p>Test history processing (simulates extension history sync).</p>
+            <button onclick="testProcessHistory()">Test History Processing</button>
+            <div id="processResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. CORS Test</h3>
+            <p>Test CORS headers and preflight requests.</p>
+            <button onclick="testCORS()">Test CORS</button>
+            <div id="corsResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>6. Ollama Model Test</h3>
+            <p>Test Ollama model configuration endpoint.</p>
+            <button onclick="testOllamaModel()">Test Ollama Model</button>
+            <div id="ollamaModelResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>7. Extension Simulation</h3>
+            <p>Simulate the exact API calls the extension makes.</p>
+            <button onclick="simulateExtension()">Simulate Extension</button>
+            <div id="extensionResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>7. Run All Tests</h3>
+            <p>Run all integration tests in sequence.</p>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="allTestsResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8080';
+        
+        // Update connection status
+        async function updateConnectionStatus() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`);
+                const result = await response.json();
+                
+                const statusDiv = document.getElementById('connectionStatus');
+                if (result.status === 'healthy') {
+                    statusDiv.className = 'status connected';
+                    statusDiv.innerHTML = `✅ Backend connected! HistoryHounder available: ${result.historyhounder_available}<br>🤖 Ollama Model: ${result.ollama_model || 'Not configured'}`;
+                } else {
+                    statusDiv.className = 'status disconnected';
+                    statusDiv.innerHTML = '❌ Backend responded but status is not healthy';
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('connectionStatus');
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = `❌ Backend connection failed: ${error.message}`;
+            }
+        }
+        
+        // Test health endpoint
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing health endpoint...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`);
+                const result = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Health check successful!\n\nResponse:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Health check failed:\n${error.message}`;
+            }
+        }
+        
+        // Test search endpoint
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing search endpoint...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/search?q=${encodeURIComponent(query)}&top_k=5`);
+                const result = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Search successful!\n\nQuery: "${query}"\nResults: ${result.results.length}\n\nResponse:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Search failed:\n${error.message}`;
+            }
+        }
+        
+        // Test Q&A endpoint
+        async function testQA() {
+            const question = document.getElementById('questionQuery').value;
+            const resultDiv = document.getElementById('qaResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing Q&A endpoint...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/qa`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        top_k: 5
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Q&A successful!\n\nQuestion: "${question}"\n\nResponse:\n${JSON.stringify(result, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Q&A failed:\n${result.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Q&A failed:\n${error.message}`;
+            }
+        }
+        
+        // Test history processing
+        async function testProcessHistory() {
+            const resultDiv = document.getElementById('processResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing history processing...';
+            
+            try {
+                const sampleHistory = [
+                    {
+                        id: '1',
+                        url: 'https://example.com',
+                        title: 'Example Site',
+                        lastVisitTime: Date.now(),
+                        visitCount: 1
+                    },
+                    {
+                        id: '2',
+                        url: 'https://test.com',
+                        title: 'Test Site',
+                        lastVisitTime: Date.now() - 3600000,
+                        visitCount: 2
+                    }
+                ];
+                
+                const response = await fetch(`${BACKEND_URL}/api/process-history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        history: sampleHistory
+                    })
+                });
+                const result = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ History processing successful!\n\nProcessed: ${result.processed_count} items\n\nResponse:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ History processing failed:\n${error.message}`;
+            }
+        }
+        
+        // Test CORS
+        async function testCORS() {
+            const resultDiv = document.getElementById('corsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing CORS...';
+            
+            try {
+                // Test OPTIONS request
+                const optionsResponse = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'OPTIONS'
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': optionsResponse.headers.get('access-control-allow-origin'),
+                    'Access-Control-Allow-Methods': optionsResponse.headers.get('access-control-allow-methods'),
+                    'Access-Control-Allow-Headers': optionsResponse.headers.get('access-control-allow-headers')
+                };
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ CORS test successful!\n\nOPTIONS Status: ${optionsResponse.status}\nCORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ CORS test failed:\n${error.message}`;
+            }
+        }
+        
+        // Test Ollama model configuration
+        async function testOllamaModel() {
+            const resultDiv = document.getElementById('ollamaModelResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing Ollama model configuration...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/ollama/model`);
+                const result = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Ollama model test successful!\n\nCurrent Model: ${result.current_model}\nAvailable Models: ${result.available_models.join(', ')}\n\nResponse:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Ollama model test failed:\n${error.message}`;
+            }
+        }
+        
+        // Simulate extension calls
+        async function simulateExtension() {
+            const resultDiv = document.getElementById('extensionResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Simulating extension API calls...';
+            
+            try {
+                const results = [];
+                
+                // 1. Test backend connection (like settings.js)
+                const healthResponse = await fetch(`${BACKEND_URL}/api/health`);
+                const healthResult = await healthResponse.json();
+                results.push(`1. Health Check: ${healthResult.status === 'healthy' ? '✅' : '❌'}`);
+                
+                // 2. Test search (like background.js searchHistory)
+                const searchResponse = await fetch(`${BACKEND_URL}/api/search?q=test&top_k=5`);
+                const searchResult = await searchResponse.json();
+                results.push(`2. Search: ${searchResult.success ? '✅' : '❌'} (${searchResult.results.length} results)`);
+                
+                // 3. Test Q&A (like background.js askQuestion)
+                const qaResponse = await fetch(`${BACKEND_URL}/api/qa`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: 'Test question', top_k: 5 })
+                });
+                const qaResult = await qaResponse.json();
+                results.push(`3. Q&A: ${qaResult.success ? '✅' : '❌'} (${qaResult.error ? 'Error: ' + qaResult.error : 'Success'})`);
+                
+                // 4. Test history processing (like settings.js syncHistoryToBackend)
+                const processResponse = await fetch(`${BACKEND_URL}/api/process-history`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: [{ id: '1', url: 'https://test.com', title: 'Test', lastVisitTime: Date.now(), visitCount: 1 }] })
+                });
+                const processResult = await processResponse.json();
+                results.push(`4. History Processing: ${processResult.success ? '✅' : '❌'} (${processResult.processed_count} items)`);
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Extension simulation complete!\n\n${results.join('\n')}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Extension simulation failed:\n${error.message}`;
+            }
+        }
+        
+        // Run all tests
+        async function runAllTests() {
+            const resultDiv = document.getElementById('allTestsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Running all tests...';
+            
+            const tests = [
+                { name: 'Health Check', fn: testHealth },
+                { name: 'Search', fn: testSearch },
+                { name: 'Q&A', fn: testQA },
+                { name: 'History Processing', fn: testProcessHistory },
+                { name: 'CORS', fn: testCORS },
+                { name: 'Ollama Model', fn: testOllamaModel }
+            ];
+            
+            const results = [];
+            
+            for (const test of tests) {
+                try {
+                    await test.fn();
+                    results.push(`✅ ${test.name}: Passed`);
+                } catch (error) {
+                    results.push(`❌ ${test.name}: Failed - ${error.message}`);
+                }
+            }
+            
+            resultDiv.className = 'result success';
+            resultDiv.textContent = `All tests completed!\n\n${results.join('\n')}`;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateConnectionStatus();
+            // Update status every 5 seconds
+            setInterval(updateConnectionStatus, 5000);
+        });
+    </script>
+</body>
+</html> 
