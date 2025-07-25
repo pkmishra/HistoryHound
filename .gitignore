@@ -114,3 +114,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/ 
+
+# Conversation logs
+Full_Conversation_Log.md 
