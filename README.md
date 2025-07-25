@@ -1,22 +1,19 @@
-# HistoryHounder: Chat with Your Browser History
+# HistoryHounder
 
-HistoryHounder is a local, privacy-first tool that lets you search and chat with your browser history using natural language. It supports Chrome, Brave, Edge, Firefox, and Safari, and can extract, embed, and semantically search your browsing history. You can use local LLMs (like Ollama) for true Q&A over your history.
-
----
+A local, privacy-first tool for natural language querying and chatting with your browser history. Extract, analyze, and search through your browsing history using AI-powered semantic search and Q&A.
 
 ## Features
-- **Browser-agnostic**: Works with Chrome, Brave, Edge, Firefox, Safari
-- **Content extraction**: Fetches and extracts main text from articles, metadata from videos (YouTube, etc.)
-- **Semantic search**: Embeds your history and lets you search with natural language
-- **LLM Q&A**: Use local LLMs (Ollama) to answer questions using your browsing history as context
-- **Domain/URL filtering**: Ignore specific domains or URL patterns during extraction, embedding, and search
-- **URL limiting**: Control the number of distinct URLs processed for testing or subset processing
-- **Robust metadata handling**: All metadata (including datetime, None, lists, dicts) is safely converted to ChromaDB-compatible types; edge cases are tested
-- **Pluggable architecture**: Swap out embedders, LLMs, and vector stores
-- **Local-first**: All data stays on your machine
-- **Security hardened**: Comprehensive input validation, path sanitization, and security testing
-- **Comprehensive test coverage**: Extensive test suite covering unit tests, integration tests, edge cases, error handling, and real-world scenarios
-- **Robust end-to-end integration tests**: The test suite uses real, public URLs (externalized in `tests/real_world_urls.txt`) to verify the full pipeline, including extraction, embedding, and semantic search. No mocking is used in integration tests—real network calls and embeddings are performed. YouTube extraction is handled by yt-dlp and is robust to real-world metadata fields.
+
+- **Cross-platform browser support**: Chrome, Brave, Edge, Firefox, Safari (Windows, macOS, Linux)
+- **Content extraction**: Fetch and extract content from articles and videos (YouTube via yt-dlp)
+- **Semantic search**: Find relevant history entries using embeddings
+- **LLM Q&A**: Ask questions about your browsing history using local LLMs (Ollama)
+- **Privacy-first**: All processing happens locally, no data sent to external services
+- **Filtering**: Ignore specific domains or URL patterns
+- **URL limiting**: Limit the number of URLs processed for faster processing
+- **Security hardened**: Input validation, path sanitization, subprocess security
+- **Comprehensive test coverage**: Unit, integration, security, and edge case tests
+- **Robust end-to-end integration tests**: Using real-world URLs and scenarios
 
 ---
 

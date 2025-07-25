@@ -178,7 +178,18 @@ def test_extract_and_process_history_with_url_limit_and_content(tmp_path):
         assert 'title' in r
 
 
-def test_extract_and_process_history_with_url_limit_and_embedding(tmp_path):
+def test_extract_and_process_history_with_url_limit_and_embedding(tmp_path, monkeypatch):
+    # Mock content fetching to avoid network dependencies
+    def mock_fetch_and_extract(url):
+        return {
+            'type': 'article',
+            'title': 'Mock Title',
+            'text': 'Mock content for testing',
+            'url': url
+        }
+    
+    monkeypatch.setattr('historyhounder.content_fetcher.fetch_and_extract', mock_fetch_and_extract)
+    
     now = datetime.now()
     chrome_epoch = datetime(1601, 1, 1)
     def to_chrome_time(dt):

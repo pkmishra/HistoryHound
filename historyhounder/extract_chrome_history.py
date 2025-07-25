@@ -4,15 +4,40 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 import sys
+import platform
 
-# Known browser history paths for macOS
-BROWSER_PATHS = {
-    'chrome': os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/History'),
-    'brave': os.path.expanduser('~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History'),
-    'edge': os.path.expanduser('~/Library/Application Support/Microsoft Edge/Default/History'),
-    'firefox': os.path.expanduser('~/Library/Application Support/Firefox/Profiles'),  # Needs special handling
-    'safari': os.path.expanduser('~/Library/Safari/History.db'),
-}
+# Cross-platform browser history paths
+def get_browser_paths():
+    """Get browser paths based on the current operating system."""
+    system = platform.system().lower()
+    
+    if system == "darwin":  # macOS
+        return {
+            'chrome': os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/History'),
+            'brave': os.path.expanduser('~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History'),
+            'edge': os.path.expanduser('~/Library/Application Support/Microsoft Edge/Default/History'),
+            'firefox': os.path.expanduser('~/Library/Application Support/Firefox/Profiles'),  # Needs special handling
+            'safari': os.path.expanduser('~/Library/Safari/History.db'),
+        }
+    elif system == "windows":  # Windows
+        return {
+            'chrome': os.path.expanduser('~/AppData/Local/Google/Chrome/User Data/Default/History'),
+            'brave': os.path.expanduser('~/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/History'),
+            'edge': os.path.expanduser('~/AppData/Local/Microsoft/Edge/User Data/Default/History'),
+            'firefox': os.path.expanduser('~/AppData/Roaming/Mozilla/Firefox/Profiles'),  # Needs special handling
+        }
+    elif system == "linux":  # Linux
+        return {
+            'chrome': os.path.expanduser('~/.config/google-chrome/Default/History'),
+            'brave': os.path.expanduser('~/.config/BraveSoftware/Brave-Browser/Default/History'),
+            'edge': os.path.expanduser('~/.config/microsoft-edge/Default/History'),
+            'firefox': os.path.expanduser('~/.mozilla/firefox'),  # Needs special handling
+        }
+    else:
+        return {}
+
+# Get browser paths for current platform
+BROWSER_PATHS = get_browser_paths()
 
 def available_browsers():
     browsers = {}

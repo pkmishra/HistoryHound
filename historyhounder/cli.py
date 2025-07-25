@@ -38,7 +38,7 @@ def validate_file_path(file_path):
     # Allow only relative paths or paths in safe directories
     if file_path.startswith('/'):
         # Check if it's in a temporary directory
-        temp_dirs = ['/tmp', '/var/tmp', '/private/tmp', '/var/folders']
+        temp_dirs = ['/tmp', '/var/tmp', '/private/tmp', '/var/folders', '/private/var/folders']
         user_home = os.path.expanduser('~')
         
         is_temp = any(absolute_path.startswith(temp_dir) for temp_dir in temp_dirs)

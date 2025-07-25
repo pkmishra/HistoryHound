@@ -11,7 +11,7 @@ class DummyResp:
 
 
 def test_youtube_metadata(monkeypatch):
-    def dummy_run(cmd, capture_output, text, check):
+    def dummy_run(cmd, capture_output, text, check, timeout=None):
         class DummyResult:
             stdout = '{"title": "Test Video", "description": "Desc", "channel": "Chan", "upload_date": "20240601", "duration": 123}'
         return DummyResult()
@@ -25,7 +25,7 @@ def test_youtube_metadata(monkeypatch):
 
 def test_article_content(monkeypatch):
     html = '<html><head><title>Test</title></head><body><h1>Headline</h1><p>Body</p></body></html>'
-    def dummy_get(url, timeout):
+    def dummy_get(url, timeout, headers=None):
         return DummyResp(html)
     monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
     class DummyDoc:
@@ -44,7 +44,7 @@ def test_article_content(monkeypatch):
 
 def test_fallback_beautifulsoup(monkeypatch):
     html = '<html><head><title>Fallback</title><meta name="description" content="desc"></head><body></body></html>'
-    def dummy_get(url, timeout):
+    def dummy_get(url, timeout, headers=None):
         return DummyResp(html)
     monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
     class DummyDoc:
@@ -59,7 +59,7 @@ def test_fallback_beautifulsoup(monkeypatch):
 
 
 def test_error_handling(monkeypatch):
-    def dummy_get(url, timeout):
+    def dummy_get(url, timeout, headers=None):
         raise Exception('network fail')
     monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
     url = 'https://example.com/error'
@@ -69,7 +69,7 @@ def test_error_handling(monkeypatch):
 
 def test_malformed_html(monkeypatch):
     html = '<html><head><title>Malformed<title></head><body><h1>Headline'
-    def dummy_get(url, timeout):
+    def dummy_get(url, timeout, headers=None):
         return DummyResp(html)
     monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
     class DummyDoc:
@@ -83,7 +83,7 @@ def test_malformed_html(monkeypatch):
 
 
 def test_request_timeout(monkeypatch):
-    def dummy_get(url, timeout):
+    def dummy_get(url, timeout, headers=None):
         raise Exception('timeout')
     monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
     url = 'https://example.com/timeout'
