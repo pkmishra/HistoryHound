@@ -15,6 +15,7 @@ def extract_and_process_history(
     embedder_backend='sentence-transformers',
     progress_callback=None,
     persist_directory='chroma_db',
+    url_limit=None,
 ):
     """
     Orchestrate extraction, filtering, content fetching, embedding, and storing.
@@ -29,8 +30,13 @@ def extract_and_process_history(
         history = [h for h in history if not should_ignore(h['url'], ignore_domains, ignore_patterns)]
     if not history:
         return {'status': 'no_history', 'results': []}
+    
+    # 3. Apply URL limit if specified
+    if url_limit is not None and url_limit >= 0:
+        history = history[:url_limit]
+    
     results = []
-    # 3. Fetch content
+    # 4. Fetch content
     if with_content or embed:
         if progress_callback:
             progress_callback(f"Fetching content for {len(history)} URLs...")
@@ -41,7 +47,7 @@ def extract_and_process_history(
             results.append({**h, **content})
     else:
         results = history
-    # 4. Embed and store
+    # 5. Embed and store
     if embed:
         if progress_callback:
             progress_callback("Embedding and storing in Chroma...")

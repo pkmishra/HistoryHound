@@ -217,3 +217,71 @@ def test_cli_malformed_ignore_domain(tmp_path):
     json_str = extract_json_from_output(out)
     data = json.loads(json_str)
     assert isinstance(data, list) 
+
+
+def test_cli_extract_with_url_limit(tmp_path):
+    now = datetime.now()
+    chrome_epoch = datetime(1601, 1, 1)
+    def to_chrome_time(dt):
+        return int((dt - chrome_epoch).total_seconds() * 1_000_000)
+    url_title = load_real_world_urls()
+    url_title_time = [(url, title, to_chrome_time(now)) for url, title in url_title]
+    db_path = tmp_path / 'History'
+    create_chrome_history_db_with_urls(str(db_path), url_title_time)
+    # Test with URL limit of 3
+    out = run_cli(['extract', '--browser', 'chrome', '--db-path', str(db_path), '--url-limit', '3'])
+    try:
+        json_str = extract_json_from_output(out)
+        data = json.loads(json_str)
+    except Exception as e:
+        print(f"CLI output:\n{out}")
+        raise
+    assert isinstance(data, list)
+    assert len(data) == 3
+    assert len(data) <= 3  # Should not exceed limit
+
+
+def test_cli_extract_with_url_limit_and_content(tmp_path):
+    now = datetime.now()
+    chrome_epoch = datetime(1601, 1, 1)
+    def to_chrome_time(dt):
+        return int((dt - chrome_epoch).total_seconds() * 1_000_000)
+    url_title = load_real_world_urls()
+    url_title_time = [(url, title, to_chrome_time(now)) for url, title in url_title]
+    db_path = tmp_path / 'History'
+    create_chrome_history_db_with_urls(str(db_path), url_title_time)
+    # Test with URL limit of 2 and content fetching
+    out = run_cli(['extract', '--browser', 'chrome', '--db-path', str(db_path), '--with-content', '--url-limit', '2'])
+    try:
+        json_str = extract_json_from_output(out)
+        data = json.loads(json_str)
+    except Exception as e:
+        print(f"CLI output:\n{out}")
+        raise
+    assert isinstance(data, list)
+    assert len(data) == 2
+    # Should have content for the limited URLs
+    for doc in data:
+        assert 'url' in doc
+        assert 'title' in doc
+
+
+def test_cli_extract_with_url_limit_zero(tmp_path):
+    now = datetime.now()
+    chrome_epoch = datetime(1601, 1, 1)
+    def to_chrome_time(dt):
+        return int((dt - chrome_epoch).total_seconds() * 1_000_000)
+    url_title = load_real_world_urls()
+    url_title_time = [(url, title, to_chrome_time(now)) for url, title in url_title]
+    db_path = tmp_path / 'History'
+    create_chrome_history_db_with_urls(str(db_path), url_title_time)
+    # Test with URL limit of 0 (should return no results)
+    out = run_cli(['extract', '--browser', 'chrome', '--db-path', str(db_path), '--url-limit', '0'])
+    try:
+        json_str = extract_json_from_output(out)
+        data = json.loads(json_str)
+    except Exception as e:
+        print(f"CLI output:\n{out}")
+        raise
+    assert isinstance(data, list)
+    assert len(data) == 0  # Should return no results 

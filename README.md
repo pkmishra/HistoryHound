@@ -52,6 +52,20 @@ Extract, fetch content, and embed your history from the last 7 days:
 uv run python -m historyhounder.cli extract --days 7 --with-content --embed
 ```
 
+### **Limit Number of URLs Processed**
+You can limit the number of distinct URLs processed using the `--url-limit` option. This is useful for testing or when you want to process only a subset of your history:
+
+```sh
+# Process only the first 10 URLs from your history
+uv run python -m historyhounder.cli extract --url-limit 10 --with-content
+
+# Process only the first 5 URLs and embed them
+uv run python -m historyhounder.cli extract --url-limit 5 --with-content --embed
+
+# Process only the first 3 URLs from the last 30 days
+uv run python -m historyhounder.cli extract --days 30 --url-limit 3 --with-content
+```
+
 ### **Domain and URL Pattern Filtering**
 You can ignore specific domains or URL patterns during extraction, embedding, and search using the `--ignore-domain` and `--ignore-pattern` options. Multiple values can be specified in a single argument, separated by commas:
 

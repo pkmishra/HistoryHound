@@ -61,7 +61,8 @@ def extract_command(args):
         embed=args.embed,
         embedder_backend=args.embedder,
         progress_callback=progress,
-        persist_directory=args.chroma_dir
+        persist_directory=args.chroma_dir,
+        url_limit=args.url_limit
     )
     if result['status'] == 'no_history':
         print("No history found for the given criteria.")
@@ -104,6 +105,7 @@ def main():
     extract_parser.add_argument('--ignore-domain', type=str, help='Ignore URLs from these domains (comma-separated, e.g., "google.com,facebook.com")')
     extract_parser.add_argument('--ignore-pattern', type=str, help='Ignore URLs matching these patterns or substrings (comma-separated, e.g., "login,logout,/admin")')
     extract_parser.add_argument('--chroma-dir', type=str, default='chroma_db', help='Chroma vector DB directory to use')
+    extract_parser.add_argument('--url-limit', type=int, default=None, help='Limit the number of URLs to extract (default: all)')
     extract_parser.set_defaults(func=extract_command)
 
     # Search command
