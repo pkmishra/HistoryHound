@@ -65,3 +65,28 @@ def test_error_handling(monkeypatch):
     url = 'https://example.com/error'
     result = content_fetcher.fetch_and_extract(url)
     assert 'error' in result 
+
+
+def test_malformed_html(monkeypatch):
+    html = '<html><head><title>Malformed<title></head><body><h1>Headline'
+    def dummy_get(url, timeout):
+        return DummyResp(html)
+    monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
+    class DummyDoc:
+        def __init__(self, text):
+            raise Exception('fail')
+    monkeypatch.setattr(content_fetcher, 'Document', DummyDoc)
+    url = 'https://example.com/malformed'
+    result = content_fetcher.fetch_and_extract(url)
+    assert result['type'] == 'unknown'
+    assert 'title' in result
+
+
+def test_request_timeout(monkeypatch):
+    def dummy_get(url, timeout):
+        raise Exception('timeout')
+    monkeypatch.setattr(content_fetcher.requests, 'get', dummy_get)
+    url = 'https://example.com/timeout'
+    result = content_fetcher.fetch_and_extract(url)
+    assert 'error' in result
+    assert 'timeout' in result['error'] 

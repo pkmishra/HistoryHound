@@ -50,6 +50,7 @@ def extract_command(args):
     ignore_patterns = parse_comma_separated_values(args.ignore_pattern) if args.ignore_pattern else []
     def progress(msg):
         print(msg)
+    print(f"[DEBUG] extract_command: Using Chroma persist_directory: {args.chroma_dir}")
     result = extract_and_process_history(
         browser=browser,
         db_path=db_path,
@@ -59,7 +60,8 @@ def extract_command(args):
         with_content=args.with_content,
         embed=args.embed,
         embedder_backend=args.embedder,
-        progress_callback=progress
+        progress_callback=progress,
+        persist_directory=args.chroma_dir
     )
     if result['status'] == 'no_history':
         print("No history found for the given criteria.")
@@ -83,7 +85,8 @@ def search_command(args):
         for i, src in enumerate(result['sources'], 1):
             print(f"[{i}] {src[:200]}{'...' if len(src) > 200 else ''}")
     else:
-        results = semantic_search(args.query, top_k=args.top_k, embedder_backend=args.embedder)
+        print(f"[DEBUG] search_command: Using Chroma persist_directory: {args.chroma_dir}")
+        results = semantic_search(args.query, top_k=args.top_k, embedder_backend=args.embedder, persist_directory=args.chroma_dir)
         print(json.dumps(results, indent=2))
 
 def main():
@@ -100,6 +103,7 @@ def main():
     extract_parser.add_argument('--embedder', type=str, default='sentence-transformers', help='Embedder backend to use')
     extract_parser.add_argument('--ignore-domain', type=str, help='Ignore URLs from these domains (comma-separated, e.g., "google.com,facebook.com")')
     extract_parser.add_argument('--ignore-pattern', type=str, help='Ignore URLs matching these patterns or substrings (comma-separated, e.g., "login,logout,/admin")')
+    extract_parser.add_argument('--chroma-dir', type=str, default='chroma_db', help='Chroma vector DB directory to use')
     extract_parser.set_defaults(func=extract_command)
 
     # Search command
@@ -109,6 +113,7 @@ def main():
     search_parser.add_argument('--embedder', type=str, default='sentence-transformers', help='Embedder backend to use')
     search_parser.add_argument('--llm', type=str, default=None, help='LLM to use for Q&A (e.g., ollama)')
     search_parser.add_argument('--llm-model', type=str, default='llama3', help='Ollama model to use (default: llama3)')
+    search_parser.add_argument('--chroma-dir', type=str, default='chroma_db', help='Chroma vector DB directory to use')
     search_parser.set_defaults(func=search_command)
 
     # If no subcommand, default to extract

@@ -146,3 +146,24 @@ README.md                # This file
 
 ## License
 MIT (or your chosen license) 
+
+---
+
+## ChromaDB Best Practices: PersistentClient for Test Isolation and Multi-Instance Support
+
+- **ChromaDB uses a singleton/shared client by default, which does not allow multiple clients with different settings (such as different persist directories) in the same process.**
+- To support integration tests, test isolation, and multiple independent vector stores in the same process, **HistoryHounder uses `chromadb.PersistentClient` instead of `chromadb.Client`**.
+- This allows each test or pipeline to specify its own `persist_directory` (via the `path` argument), ensuring that data is isolated and there are no conflicts between tests or runs.
+- **If you need to use multiple ChromaDB databases or collections in the same process (e.g., for testing, multi-user, or multi-tenant scenarios), always use `PersistentClient`.**
+- Example usage:
+
+```python
+import chromadb
+client = chromadb.PersistentClient(path="path/to/chroma_db")
+collection = client.get_or_create_collection("history")
+```
+
+- This is now the default in `historyhounder/vector_store.py` and is required for all integration tests to pass.
+- For more details, see [ChromaDB Issue: An instance of Chroma already exists for ... with different settings](https://blog.csdn.net/DLW__/article/details/145953793)
+
+--- 

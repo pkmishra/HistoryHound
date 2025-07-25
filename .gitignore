@@ -67,6 +67,7 @@ coverage.xml
 *.sqlite
 *.sqlite3
 chroma_db/
+:memory:/
 
 # Logs
 *.log

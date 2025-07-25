@@ -1,6 +1,17 @@
 # Format: url|title
-https://www.nytimes.com/2023/12/01/technology/ai-ethics.html|AI Ethics - NYTimes
+https://en.wikipedia.org/wiki/Python_(programming_language)|Wikipedia: Python (programming language)
+https://en.wikipedia.org/wiki/SpaceX|Wikipedia: SpaceX
+https://en.wikipedia.org/wiki/COVID-19_pandemic|Wikipedia: COVID-19 pandemic
+https://en.wikipedia.org/wiki/Machine_learning|Wikipedia: Machine learning
+https://en.wikipedia.org/wiki/Deep_learning|Wikipedia: Deep learning
+https://en.wikipedia.org/wiki/History_of_the_Internet|Wikipedia: History of the Internet
+https://en.wikipedia.org/wiki/World_War_II|Wikipedia: World War II
+https://en.wikipedia.org/wiki/Barack_Obama|Wikipedia: Barack Obama
+https://en.wikipedia.org/wiki/Elon_Musk|Wikipedia: Elon Musk
+https://en.wikipedia.org/wiki/Climate_change|Wikipedia: Climate change
+https://en.wikipedia.org/wiki/Internet|Wikipedia: Internet
 https://www.ted.com/talks/sam_harris_can_we_build_ai_without_losing_control_over_it|Sam Harris TED Talk on AI
 https://www.nature.com/articles/d41586-023-02020-7|Nature: AI in Science
 https://www.bbc.com/news/world-asia-67032116|BBC News: Asia
-https://www.coursera.org/learn/machine-learning|Coursera: Machine Learning Course 
+https://www.coursera.org/learn/machine-learning|Coursera: Machine Learning Course
+https://docs.astral.sh/uv/pip/environments/|uv: Using Python environments 

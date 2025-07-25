@@ -4,9 +4,9 @@ from historyhounder.embedder import get_embedder
 from historyhounder.vector_store import ChromaVectorStore
 from historyhounder.llm.ollama_qa import answer_question_ollama
 
-def semantic_search(query, top_k=5, embedder_backend='sentence-transformers'):
+def semantic_search(query, top_k=5, embedder_backend='sentence-transformers', persist_directory='chroma_db'):
     embedder = get_embedder(embedder_backend)
-    store = ChromaVectorStore()
+    store = ChromaVectorStore(persist_directory=persist_directory)
     query_emb = embedder.embed([query])[0]
     results = store.query(query_emb, top_k=top_k)
     output = []

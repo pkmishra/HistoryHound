@@ -2,6 +2,7 @@ import chromadb
 from chromadb.config import Settings
 from typing import List, Dict
 from datetime import datetime
+import gc
 
 def convert_metadata_for_chroma(metadata_dict):
     """Convert metadata values to ChromaDB-compatible types."""
@@ -24,7 +25,8 @@ class ChromaVectorStore:
     Vector store using ChromaDB. Stores embeddings and metadata.
     """
     def __init__(self, persist_directory="chroma_db"):
-        self.client = chromadb.Client(Settings(persist_directory=persist_directory))
+        import chromadb
+        self.client = chromadb.PersistentClient(path=persist_directory)
         self.collection = self.client.get_or_create_collection("history")
 
     def add(self, docs: List[str], embeddings: List[List[float]], metadatas: List[Dict]):
@@ -46,3 +48,18 @@ class ChromaVectorStore:
             include=["metadatas", "documents", "distances"]
         )
         return results 
+
+    def count(self):
+        # Returns the number of documents in the collection
+        return self.collection.count() 
+
+    def close(self):
+        # Attempt to close the client and force a flush to disk
+        try:
+            if hasattr(self.client, 'close'):
+                self.client.close()
+        except Exception:
+            pass
+        del self.client
+        del self.collection
+        gc.collect() 

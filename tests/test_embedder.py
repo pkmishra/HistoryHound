@@ -27,3 +27,12 @@ def test_registry():
 def test_unknown_embedder():
     with pytest.raises(ValueError):
         get_embedder('not-a-real-embedder') 
+
+
+def test_additional_embedders():
+    # Placeholder: Add tests for new embedders if/when implemented
+    # Example:
+    # embedder = get_embedder('new-embedder')
+    # result = embedder.embed(["test"])
+    # assert ...
+    pass 

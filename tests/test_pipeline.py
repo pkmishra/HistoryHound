@@ -93,3 +93,29 @@ def test_extract_and_process_history_with_filter(tmp_path):
         embedder_backend='sentence-transformers',
     )
     assert all(ignore_domain not in r['url'] for r in result['results']) 
+
+
+def test_extract_and_process_history_db_failure(tmp_path, monkeypatch):
+    # Simulate DB connection failure
+    def fail_connect(*a, **kw):
+        raise Exception("DB connection failed")
+    import sqlite3
+    monkeypatch.setattr(sqlite3, 'connect', fail_connect)
+    db_path = tmp_path / 'History'
+    # Create an empty file so FileNotFoundError is not raised
+    db_path.write_text('')
+    try:
+        with pytest.raises(Exception) as excinfo:
+            extract_and_process_history(
+                browser='chrome',
+                db_path=str(db_path),
+                days=None,
+                ignore_domains=[],
+                ignore_patterns=[],
+                with_content=True,
+                embed=True,
+                embedder_backend='sentence-transformers',
+            )
+        assert 'DB connection failed' in str(excinfo.value)
+    finally:
+        pass 

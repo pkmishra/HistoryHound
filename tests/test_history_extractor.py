@@ -103,4 +103,37 @@ def test_days_filter(monkeypatch):
         assert len(result) == 1
         assert result[0]['url'] == 'http://recent.com'
     finally:
+        os.remove(db_path)
+
+
+def test_empty_title(monkeypatch):
+    now = datetime(2024, 6, 1)
+    chrome_time = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
+    rows = [
+        ('http://a.com', '', chrome_time),
+    ]
+    monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
+    db_path = make_temp_db()
+    try:
+        result = history_extractor.extract_history('chrome', db_path, days=None, now=now)
+        assert len(result) == 1
+        assert result[0]['title'] == ''
+    finally:
+        os.remove(db_path)
+
+
+def test_duplicate_urls(monkeypatch):
+    now = datetime(2024, 6, 1)
+    chrome_time = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
+    rows = [
+        ('http://dup.com', 'Dup', chrome_time),
+        ('http://dup.com', 'Dup', chrome_time),
+    ]
+    monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
+    db_path = make_temp_db()
+    try:
+        result = history_extractor.extract_history('chrome', db_path, days=None, now=now)
+        assert len(result) == 2
+        assert all(r['url'] == 'http://dup.com' for r in result)
+    finally:
         os.remove(db_path) 

@@ -14,6 +14,7 @@ def extract_and_process_history(
     embed=False,
     embedder_backend='sentence-transformers',
     progress_callback=None,
+    persist_directory='chroma_db',
 ):
     """
     Orchestrate extraction, filtering, content fetching, embedding, and storing.
@@ -44,14 +45,19 @@ def extract_and_process_history(
     if embed:
         if progress_callback:
             progress_callback("Embedding and storing in Chroma...")
+        # Filter out documents with errors or empty text/description
+        valid_results = [r for r in results if not r.get('error') and (r.get('text') or r.get('description'))]
+        if not valid_results:
+            return {'status': 'no_valid_documents', 'results': results, 'num_embedded': 0}
         embedder = get_embedder(embedder_backend)
-        docs = [r.get('text') or r.get('description') or '' for r in results]
+        docs = [r.get('text') or r.get('description') or '' for r in valid_results]
         embeddings = embedder.embed(docs)
         metadatas = [
             convert_metadata_for_chroma({k: v for k, v in r.items() if k not in ('text', 'description')})
-            for r in results
+            for r in valid_results
         ]
-        store = ChromaVectorStore()
+        store = ChromaVectorStore(persist_directory=persist_directory)
         store.add(docs, embeddings, metadatas)
-        return {'status': 'embedded', 'results': results, 'num_embedded': len(docs)}
+        store.close()
+        return {'status': 'embedded', 'results': valid_results, 'num_embedded': len(docs)}
     return {'status': 'fetched', 'results': results} 
