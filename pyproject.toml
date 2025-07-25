@@ -1,0 +1,11 @@
+[project]
+name = "historyhounder"
+version = "0.1.0"
+description = "Chat with your browser history."
+authors = [
+    { name = "Your Name", email = "your@email.com" }
+]
+requires-python = ">=3.8"
+
+[tool.uv]
+requirements = "requirements.txt" 

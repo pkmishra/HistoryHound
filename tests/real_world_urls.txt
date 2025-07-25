@@ -1,0 +1,6 @@
+# Format: url|title
+https://www.nytimes.com/2023/12/01/technology/ai-ethics.html|AI Ethics - NYTimes
+https://www.ted.com/talks/sam_harris_can_we_build_ai_without_losing_control_over_it|Sam Harris TED Talk on AI
+https://www.nature.com/articles/d41586-023-02020-7|Nature: AI in Science
+https://www.bbc.com/news/world-asia-67032116|BBC News: Asia
+https://www.coursera.org/learn/machine-learning|Coursera: Machine Learning Course 

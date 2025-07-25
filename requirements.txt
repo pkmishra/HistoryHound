@@ -1,0 +1,12 @@
+mock
+pytest
+requests
+readability-lxml
+beautifulsoup4
+sentence-transformers
+chromadb
+langchain
+langchain-ollama
+langchain-huggingface
+langchain-chroma
+yt-dlp 
