@@ -114,4 +114,7 @@ dmypy.json
 .pytype/
 
 # Cython debug symbols
-cython_debug/ 
+cython_debug/
+
+# Conversation log (kept locally for audit trail)
+Full_Conversation_Log.md 
