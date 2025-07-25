@@ -13,6 +13,7 @@ HistoryHounder is a local, privacy-first tool that lets you search and chat with
 - **Robust metadata handling**: All metadata (including datetime, None, lists, dicts) is safely converted to ChromaDB-compatible types; edge cases are tested
 - **Pluggable architecture**: Swap out embedders, LLMs, and vector stores
 - **Local-first**: All data stays on your machine
+- **Comprehensive test coverage**: Extensive test suite covering unit tests, integration tests, edge cases, error handling, and real-world scenarios
 - **Robust end-to-end integration tests**: The test suite uses real, public URLs (externalized in `tests/real_world_urls.txt`) to verify the full pipeline, including extraction, embedding, and semantic search. No mocking is used in integration tests—real network calls and embeddings are performed. YouTube extraction is handled by yt-dlp and is robust to real-world metadata fields.
 
 ---
@@ -96,6 +97,16 @@ uv run pytest -v
 
 The integration tests use real, public URLs (externalized in `tests/real_world_urls.txt`) to ensure the pipeline works as a real user would experience it. No mocking is used in integration tests. YouTube extraction is powered by yt-dlp and the tests are robust to metadata field variations.
 
+### Test Coverage
+The test suite provides comprehensive coverage including:
+
+- **Unit Tests**: Individual component testing with proper mocking
+- **Integration Tests**: End-to-end pipeline testing with real data
+- **Edge Case Tests**: Error handling, malformed input, empty results
+- **CLI Tests**: Argument parsing, error messages, malformed input
+- **Error Handling Tests**: Database failures, network timeouts, corrupted data
+- **Real-world Scenarios**: Using actual public URLs and content
+
 ### Integration (End-to-End) Tests
 - The test suite includes robust integration tests that simulate the full pipeline: extracting sample browser history, fetching content, embedding, storing in ChromaDB, and performing semantic search.
 - Integration tests use pytest fixtures to ensure each test uses a unique ChromaDB collection, providing full isolation and preventing cross-test contamination.
@@ -128,6 +139,7 @@ historyhounder/
     ollama_qa.py        # LangChain Q&A with Ollama
   ...
 tests/                  # All tests (pytest, including integration)
+  real_world_urls.txt   # Real URLs for integration testing
 requirements.txt         # All dependencies
 pytest.ini               # Pytest config (warning filters)
 README.md                # This file
@@ -141,6 +153,7 @@ README.md                # This file
 - For best results, keep your browser closed while extracting history (to ensure the latest data is flushed to disk).
 - The test suite is robust and covers both unit and end-to-end integration scenarios, including real-world and edge-case metadata handling.
 - **LangChain integration uses the new split-out packages (`langchain-huggingface`, `langchain-chroma`, `langchain-ollama`) and is future-proofed for LangChain 1.0+.**
+- **Comprehensive error handling and edge case testing ensures reliability in production environments.**
 
 ---
 
