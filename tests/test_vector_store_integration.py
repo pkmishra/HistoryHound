@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 Integration tests for vector store operations and pipeline issues.
-Covers the complex metadata handling and vector store structure issues we encountered.
+Covers the vector store metadata and pipeline issues we encountered.
 """
 
 import pytest
 import tempfile
 import os
 import sqlite3
-from datetime import datetime
 import shutil
+from datetime import datetime
 from unittest.mock import patch
 
 from historyhounder.vector_store import ChromaVectorStore
@@ -18,7 +18,51 @@ from historyhounder.utils import convert_metadata_for_chroma
 
 
 class TestVectorStoreIntegration:
-    """Integration tests for vector store operations and metadata handling."""
+    """Integration tests for vector store operations and pipeline issues."""
+    
+    @pytest.fixture(autouse=True)
+    def cleanup_vector_store(self):
+        """Clean up the vector store before and after each test."""
+        # Clean up before test
+        try:
+            store = ChromaVectorStore(persist_directory='chroma_db')
+            store.clear()
+            store.close()
+        except Exception:
+            pass
+        
+        yield
+        
+        # Clean up after test
+        try:
+            store = ChromaVectorStore(persist_directory='chroma_db')
+            store.clear()
+            store.close()
+        except Exception:
+            pass
+    
+    @pytest.fixture(autouse=True)
+    def cleanup_temp_files(self):
+        """Clean up temporary files before and after each test."""
+        # Clean up before test
+        temp_dir = tempfile.gettempdir()
+        for file in os.listdir(temp_dir):
+            if file.startswith('tmp') and file.endswith('.sqlite'):
+                try:
+                    os.remove(os.path.join(temp_dir, file))
+                except Exception:
+                    pass
+        
+        yield
+        
+        # Clean up after test
+        temp_dir = tempfile.gettempdir()
+        for file in os.listdir(temp_dir):
+            if file.startswith('tmp') and file.endswith('.sqlite'):
+                try:
+                    os.remove(os.path.join(temp_dir, file))
+                except Exception:
+                    pass
     
     @pytest.fixture
     def temp_persist_dir(self):

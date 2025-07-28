@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
 Integration tests for timestamp conversion and metadata handling.
-Covers the issues we encountered today with Chrome timestamps and vector store metadata.
+Covers the timestamp issues we encountered in the system.
 """
 
 import pytest
 import tempfile
 import os
 import sqlite3
-from datetime import datetime, timedelta
+import shutil
+from datetime import datetime
 from unittest.mock import patch
-import json
-import requests
 
 from historyhounder.server import app
 from historyhounder.vector_store import ChromaVectorStore
@@ -27,6 +26,50 @@ class TestTimestampIntegration:
         """Create a test client for the FastAPI app."""
         from fastapi.testclient import TestClient
         return TestClient(app)
+    
+    @pytest.fixture(autouse=True)
+    def cleanup_vector_store(self):
+        """Clean up the vector store before and after each test."""
+        # Clean up before test
+        try:
+            store = ChromaVectorStore(persist_directory='chroma_db')
+            store.clear()
+            store.close()
+        except Exception:
+            pass
+        
+        yield
+        
+        # Clean up after test
+        try:
+            store = ChromaVectorStore(persist_directory='chroma_db')
+            store.clear()
+            store.close()
+        except Exception:
+            pass
+    
+    @pytest.fixture(autouse=True)
+    def cleanup_temp_files(self):
+        """Clean up temporary files before and after each test."""
+        # Clean up before test
+        temp_dir = tempfile.gettempdir()
+        for file in os.listdir(temp_dir):
+            if file.startswith('tmp') and file.endswith('.sqlite'):
+                try:
+                    os.remove(os.path.join(temp_dir, file))
+                except Exception:
+                    pass
+        
+        yield
+        
+        # Clean up after test
+        temp_dir = tempfile.gettempdir()
+        for file in os.listdir(temp_dir):
+            if file.startswith('tmp') and file.endswith('.sqlite'):
+                try:
+                    os.remove(os.path.join(temp_dir, file))
+                except Exception:
+                    pass
     
     @pytest.fixture
     def temp_db_path(self):
