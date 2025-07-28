@@ -1,0 +1,202 @@
+# HistoryHounder Development Rules
+# Based on lessons learned from timestamp issues, test cleanup, and integration testing
+
+## Core Testing & Quality Assurance Rules
+
+### Test Fixture Management
+- Always use @pytest.fixture(autouse=True) for cleanup fixtures
+- Clear vector stores between tests: store.clear() and store.close()
+- Remove temporary files (SQLite databases, temp directories)
+- Clean up external resources (ChromaDB, file systems)
+- Ensure test isolation: Each test should run in a clean environment
+- Add proper teardown for any resources created during tests
+
+### Integration Test Best Practices
+- Test without mocking when possible (as per user preference)
+- Cover end-to-end workflows, not just unit functionality
+- Test error conditions and edge cases
+- Verify data persistence and cleanup
+- Test API endpoints with real HTTP requests
+- Include timestamp handling and data conversion tests
+- Test with realistic data sizes and formats
+
+### Error Handling & Debugging
+- Add bounds checking for numeric values (timestamps, IDs)
+- Validate input data before processing
+- Log detailed error information for debugging
+- Handle SQLite overflow errors gracefully
+- Test with realistic data sizes and formats
+- Add proper exception handling in critical paths
+- Use comprehensive logging for troubleshooting
+
+## Data Validation & Security
+
+### Data Validation
+- Validate file paths to prevent traversal attacks
+- Check URL safety before processing
+- Validate timestamp ranges and formats
+- Sanitize user inputs
+- Test with malicious/edge case inputs
+- Add security-focused test cases
+- Validate SQLite data types and constraints
+
+### Security Practices
+- Implement proper input validation
+- Test with malicious URLs and data
+- Validate file paths and prevent directory traversal
+- Add timeout handling for network requests
+- Implement proper error messages without sensitive info
+- Test subprocess security and command injection
+
+## Development Workflow Rules
+
+### Code Review & Testing
+- Run all tests: uv run pytest -v
+- Ensure 100% test pass rate before committing
+- Check for proper cleanup in tests
+- Verify no data pollution between test runs
+- Test with real browser extension data
+- Validate API responses and error handling
+- Run integration tests to verify end-to-end functionality
+
+### Problem-Solving Approach
+- Start with root cause analysis (e.g., timestamp conversion)
+- Add comprehensive logging for debugging
+- Create targeted integration tests for issues
+- Test with real-world data scenarios
+- Iterate on fixes with proper test coverage
+- Document issues and solutions for future reference
+- Use systematic debugging methodology
+
+### API & Backend Development
+- Use proper response models and validation
+- Handle CORS correctly
+- Add comprehensive error responses
+- Test API endpoints with real data
+- Validate timestamp formatting and conversion
+- Ensure proper database schema handling
+- Follow FastAPI best practices
+
+## Specific Technical Rules
+
+### Timestamp Handling
+- Use Unix timestamps for SQLite storage (avoid overflow)
+- Validate timestamp bounds before conversion
+- Test Chrome epoch vs Unix epoch conversions
+- Handle timezone considerations
+- Add proper error handling for invalid timestamps
+- Convert between different timestamp formats safely
+- Test timestamp edge cases and boundary conditions
+
+### Vector Store Management
+- Clear vector stores between test runs
+- Handle embedding dimension mismatches
+- Test duplicate handling and updates
+- Validate metadata structure and conversion
+- Test incremental processing scenarios
+- Handle ChromaDB collection management properly
+- Test vector store persistence and recovery
+
+### File System & Temporary Files
+- Clean up temporary SQLite databases
+- Remove test artifacts after tests
+- Use proper temp file naming conventions
+- Handle file permission issues
+- Test with realistic file paths and sizes
+- Implement secure temporary file handling
+- Clean up temporary directories and files
+
+## User Preference Integration
+
+### Tool & Command Preferences
+- Use uv run instead of python commands
+- Don't push to remote without explicit permission
+- Ask for confirmation before major changes
+- Keep conversation logs for audit purposes
+- Double-check code for security issues
+- Respect user's preferred development tools
+
+### Testing Philosophy
+- Write integration tests without mocking when possible
+- Focus on real-world scenarios
+- Test the full pipeline, not just individual components
+- Include error conditions and edge cases
+- Ensure tests are repeatable and reliable
+- Test with realistic browser history data
+
+## Documentation & Maintenance
+
+### Code Documentation
+- Document complex timestamp conversions
+- Explain test fixture purposes and cleanup
+- Document API response formats
+- Include examples of proper usage
+- Maintain clear commit messages with context
+- Document error handling strategies
+- Explain data flow and transformations
+
+### Future-Proofing
+- Use flexible test data that can be updated
+- Design tests to handle evolving APIs
+- Include performance considerations
+- Plan for scaling and larger datasets
+- Consider backward compatibility
+- Design for maintainability and extensibility
+
+## Error Prevention Rules
+
+### Common Issues to Avoid
+- Don't use Chrome microseconds in SQLite (causes overflow)
+- Don't skip cleanup in test fixtures
+- Don't test non-existent CLI arguments
+- Don't ignore timestamp validation
+- Don't leave temporary files uncleaned
+- Don't use hardcoded test data that may change
+- Don't skip error handling in critical paths
+
+### Best Practices
+- Always validate input data
+- Always clean up resources
+- Always test error conditions
+- Always use proper logging
+- Always handle edge cases
+- Always test with realistic data
+- Always verify API responses
+
+## Performance & Scalability
+
+### Performance Considerations
+- Test with realistic data volumes
+- Monitor memory usage in tests
+- Handle large datasets efficiently
+- Test timeout scenarios
+- Optimize database operations
+- Consider embedding model performance
+
+### Scalability Planning
+- Design for larger datasets
+- Plan for concurrent access
+- Consider database optimization
+- Test with multiple users
+- Plan for horizontal scaling
+- Consider caching strategies
+
+## Quality Gates
+
+### Before Committing Code
+- All tests must pass (123/123)
+- No temporary files left behind
+- No vector store pollution
+- Proper error handling implemented
+- Security validation included
+- Documentation updated
+- Performance acceptable
+
+### Code Review Checklist
+- Test fixtures properly clean up
+- Error handling is comprehensive
+- Security measures are in place
+- API responses are validated
+- Timestamp handling is correct
+- Integration tests cover real scenarios
+- Documentation is clear and complete 
