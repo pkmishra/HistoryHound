@@ -1,6 +1,7 @@
 # HistoryHounder
 
 A local, privacy-first tool for natural language querying and chatting with your browser history. Extract, analyze, and search through your browsing history using AI-powered semantic search and Q&A.
+# Why?
 https://www.linkedin.com/posts/dharmesh_the-thing-i-want-that-may-already-exist-activity-7353505345610104833-nBYX?utm_source=share&utm_medium=member_desktop&rcm=ACoAAABdAAIBz1BuO3lnBN5wkhHsaZ32J01V6tQ
 ## Features
 
@@ -8,12 +9,20 @@ https://www.linkedin.com/posts/dharmesh_the-thing-i-want-that-may-already-exist-
 - **Content extraction**: Fetch and extract content from articles and videos (YouTube via yt-dlp)
 - **Semantic search**: Find relevant history entries using embeddings
 - **LLM Q&A**: Ask questions about your browsing history using local LLMs (Ollama)
+  - **Statistical Questions**: "What is the most visited website?" with accurate visit count analysis
+  - **Domain-Specific Questions**: "How many times did I visit GitHub?" with visit count aggregation
+  - **Semantic Questions**: "What AI-related websites did I visit?" with content-based search
+- **Browser Extension**: Full-featured extension with popup and sidepanel interfaces
+  - **Popup Interface**: Quick access to search and Q&A functionality
+  - **Sidepanel Interface**: Persistent workspace with advanced features and chat history
+  - **Real-time Sync**: Seamless integration with backend for AI-powered features
 - **Privacy-first**: All processing happens locally, no data sent to external services
 - **Filtering**: Ignore specific domains or URL patterns
 - **URL limiting**: Limit the number of URLs processed for faster processing
 - **Security hardened**: Input validation, path sanitization, subprocess security
 - **Comprehensive test coverage**: Unit, integration, security, and edge case tests
 - **Robust end-to-end integration tests**: Using real-world URLs and scenarios
+- **Advanced Q&A Testing**: Comprehensive integration tests for all question types
 
 ---
 
@@ -47,6 +56,8 @@ HistoryHounder follows a modular, loosely-coupled architecture with clear separa
 - **`llm/ollama_qa.py`**: LangChain integration with Ollama for local Q&A
 - **Retrieval-Augmented Generation (RAG)**: Context-aware question answering
 - **Prompt engineering**: Optimized prompts for browser history context
+- **Question Classification**: Intelligent routing based on question type (statistical, domain-specific, semantic)
+- **Visit Count Aggregation**: Accurate summation of visit counts for domain-specific queries
 
 #### 6. **Pipeline Orchestration**
 - **`pipeline.py`**: Main orchestration logic coordinating all components
@@ -281,9 +292,21 @@ uv run python -m historyhounder.cli search --query "Shopify AI tools" --top-k 5
 ```
 
 ### **LLM Q&A with Ollama**
-Ask a question and get an answer from your history using a local LLM:
+Ask questions about your browsing history using a local LLM:
+
+**Statistical Questions** (visit count analysis):
 ```sh
-uv run python -m historyhounder.cli search --query "What was that article I read last week about Shopify and AI tools?" --llm ollama --llm-model llama3
+uv run python -m historyhounder.cli search --query "What is the most visited website?" --llm ollama --llm-model llama3.2
+```
+
+**Domain-Specific Questions** (visit count aggregation):
+```sh
+uv run python -m historyhounder.cli search --query "How many times did I visit GitHub?" --llm ollama --llm-model llama3.2
+```
+
+**Semantic Questions** (content-based search):
+```sh
+uv run python -m historyhounder.cli search --query "What AI-related websites did I visit?" --llm ollama --llm-model llama3.2
 ```
 
 - You can change `--llm-model` to any model available in your Ollama installation (e.g., `mistral`, `llama2`, etc.)
@@ -360,6 +383,12 @@ The backend server enables the HistoryHounder browser extension to:
 - Process and sync history data
 - Access enhanced features through the extension UI
 
+**Extension Features**:
+- **Popup Interface**: Quick access to search and Q&A functionality
+- **Sidepanel Interface**: Persistent workspace with advanced features, chat history, and statistics
+- **Real-time Sync**: Seamless integration with backend for AI-powered features
+- **Quick Actions**: Pre-defined searches and questions for common use cases
+
 - The browser extension now ensures that only the required fields (`id`, `url`, `title`, `lastVisitTime`, `visitCount`) are sent to the backend when syncing history. This prevents 422 Unprocessable Entity errors from the FastAPI backend.
 
 ### Troubleshooting
@@ -392,11 +421,22 @@ The test suite provides comprehensive coverage including:
 - **CLI Tests**: Argument parsing, error messages, malformed input
 - **Error Handling Tests**: Database failures, network timeouts, corrupted data
 - **Real-world Scenarios**: Using actual public URLs and content
+- **Q&A Integration Tests**: Comprehensive testing of all question types:
+  - Statistical questions (most visited, visit counts)
+  - Domain-specific questions (visit count aggregation)
+  - Semantic questions (content-based search)
+  - Mixed question types and edge cases
 
 ### Integration (End-to-End) Tests
 - The test suite includes robust integration tests that simulate the full pipeline: extracting sample browser history, fetching content, embedding, storing in ChromaDB, and performing semantic search.
 - Integration tests use pytest fixtures to ensure each test uses a unique ChromaDB collection, providing full isolation and preventing cross-test contamination.
 - **Tests now use real datetime objects and edge-case metadata** to ensure all metadata is properly converted and stored in ChromaDB. This catches issues with datetime, None, lists, dicts, and other non-primitive types.
+- **Q&A Integration Tests**: Comprehensive testing of the complete Q&A pipeline with realistic data:
+  - Statistical question accuracy (most visited website detection)
+  - Domain-specific visit count aggregation (GitHub, LinkedIn, etc.)
+  - Semantic search with content-based retrieval
+  - Error handling for empty vector stores and invalid inputs
+  - Response structure validation and parameter validation
 
 ### CLI Design Best Practices
 
@@ -463,7 +503,7 @@ See `SECURITY.md` for detailed security guidelines and best practices.
 ---
 
 ## License
-MIT (or your chosen license)
+MIT 
 
 ---
 
