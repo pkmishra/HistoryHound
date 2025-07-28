@@ -70,6 +70,12 @@ chroma_db/
 history_db/
 :memory:/
 
+# SQLite temporary files
+*-shm
+*-wal
+*.sqlite-shm
+*.sqlite-wal
+
 # Logs
 *.log
 logs/
