@@ -46,7 +46,20 @@ def llm_qa_search(query, top_k=5, llm='ollama', llm_model='llama3.2:latest', emb
     
     retriever = SimpleRetriever(documents, metadatas)
     result = answer_question_ollama(query, retriever, model=llm_model)
+    
+    # Create detailed source information with URLs and titles
+    sources = []
+    for doc, meta in zip(documents, metadatas):
+        source_info = {
+            'content': doc,
+            'url': meta.get('url', ''),
+            'title': meta.get('title', ''),
+            'visit_time': meta.get('visit_time', ''),
+            'domain': meta.get('domain', '')
+        }
+        sources.append(source_info)
+    
     return {
         'answer': result['answer'],
-        'sources': result['sources']
+        'sources': sources
     } 
