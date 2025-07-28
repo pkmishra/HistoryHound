@@ -12,4 +12,5 @@ langchain-chroma
 yt-dlp
 fastapi
 uvicorn[standard]
-pydantic 
+pydantic
+python-dateutil 
