@@ -387,9 +387,18 @@ async function askQuestion() {
                     <div class="sources-section">
                         <strong>Sources:</strong>
                         <ul>
-                            ${response.answer.sources.map(source => `
-                                <li><a href="${source.url}" target="_blank">${escapeHtml(source.title || source.url)}</a></li>
-                            `).join('')}
+                            ${response.answer.sources.map(source => {
+                                const title = source.title || source.url || 'Untitled';
+                                const url = source.url || '#';
+                                const displayText = title.length > 50 ? title.substring(0, 50) + '...' : title;
+                                
+                                return `<li>
+                                    <a href="${url}" target="_blank" title="${escapeHtml(title)}">
+                                        ${escapeHtml(displayText)}
+                                    </a>
+                                    ${source.content ? `<br><small>${escapeHtml(source.content.substring(0, 100))}...</small>` : ''}
+                                </li>`;
+                            }).join('')}
                         </ul>
                     </div>
                 `;
