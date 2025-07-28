@@ -317,9 +317,38 @@ async function askQuestion(question, history) {
     const result = await response.json();
     
     if (result.success) {
+      // Handle new source format with metadata
+      const sources = result.sources || [];
+      const formattedSources = sources.map(source => {
+        // If source is already an object with metadata, use it
+        if (typeof source === 'object' && source.url) {
+          return {
+            title: source.title || source.url,
+            url: source.url,
+            content: source.content || ''
+          };
+        }
+        // If source is a string (old format), convert to object
+        else if (typeof source === 'string') {
+          return {
+            title: source.substring(0, 50) + '...',
+            url: '',
+            content: source
+          };
+        }
+        // Default fallback
+        else {
+          return {
+            title: 'Unknown source',
+            url: '',
+            content: String(source)
+          };
+        }
+      });
+      
       return {
         answer: result.answer,
-        sources: result.sources || []
+        sources: formattedSources
       };
     } else {
       throw new Error(result.error || 'Unknown backend error');

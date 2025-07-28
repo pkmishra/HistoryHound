@@ -68,6 +68,14 @@ class SearchResponse(BaseModel):
     total: int = Field(..., description="Total number of results")
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
 
+class SourceInfo(BaseModel):
+    """Source information model for Q&A responses"""
+    content: str = Field(..., description="Source document content")
+    url: str = Field(default="", description="Source URL")
+    title: str = Field(default="", description="Source title")
+    visit_time: str = Field(default="", description="Visit timestamp")
+    domain: str = Field(default="", description="Domain name")
+
 class QaRequest(BaseModel):
     """Q&A request model"""
     question: str = Field(..., min_length=1, description="Question to ask")
@@ -78,7 +86,7 @@ class QaResponse(BaseModel):
     success: bool = Field(..., description="Request success status")
     question: str = Field(..., description="Original question")
     answer: str = Field(..., description="AI-generated answer")
-    sources: List[str] = Field(default=[], description="Source documents")
+    sources: List[SourceInfo] = Field(default=[], description="Source documents with metadata")
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
 
 class HistoryItem(BaseModel):
@@ -310,11 +318,22 @@ async def ask_question(request: QaRequest):
         # Perform Q&A search with configurable model
         result = llm_qa_search(request.question, top_k=request.top_k, llm_model=OLLAMA_MODEL)
         
+        # Format sources for the response
+        sources = []
+        for source in result.get('sources', []):
+            sources.append(SourceInfo(
+                content=source.get('content', ''),
+                url=source.get('url', ''),
+                title=source.get('title', ''),
+                visit_time=source.get('visit_time', ''),
+                domain=source.get('domain', '')
+            ))
+        
         return QaResponse(
             success=True,
             question=request.question,
             answer=result['answer'],
-            sources=result.get('sources', [])
+            sources=sources
         )
         
     except HTTPException:
