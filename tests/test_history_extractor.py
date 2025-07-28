@@ -29,8 +29,8 @@ def test_chrome_history_all(monkeypatch):
     now = datetime(2024, 6, 1)
     chrome_time = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://a.com', 'A', chrome_time),
-        ('http://b.com', 'B', chrome_time - 10_000_000),
+        ('http://a.com', 'A', chrome_time, 5),
+        ('http://b.com', 'B', chrome_time - 10_000_000, 3),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
@@ -46,8 +46,8 @@ def test_chrome_history_days(monkeypatch):
     chrome_time_recent = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     chrome_time_old = int((now - timedelta(days=10) - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://recent.com', 'Recent', chrome_time_recent),
-        ('http://old.com', 'Old', chrome_time_old),
+        ('http://recent.com', 'Recent', chrome_time_recent, 2),
+        ('http://old.com', 'Old', chrome_time_old, 1),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
@@ -62,7 +62,7 @@ def test_firefox_history(monkeypatch):
     now = datetime(2024, 6, 1)
     ff_time = int((now - datetime(1970, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://ff.com', 'FF', ff_time),
+        ('http://ff.com', 'FF', ff_time, 4),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
@@ -93,8 +93,8 @@ def test_days_filter(monkeypatch):
     chrome_time_recent = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     chrome_time_old = int((now - timedelta(days=30) - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://recent.com', 'Recent', chrome_time_recent),
-        ('http://old.com', 'Old', chrome_time_old),
+        ('http://recent.com', 'Recent', chrome_time_recent, 3),
+        ('http://old.com', 'Old', chrome_time_old, 1),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
@@ -110,7 +110,7 @@ def test_empty_title(monkeypatch):
     now = datetime(2024, 6, 1)
     chrome_time = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://a.com', '', chrome_time),
+        ('http://a.com', '', chrome_time, 1),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
@@ -126,8 +126,8 @@ def test_duplicate_urls(monkeypatch):
     now = datetime(2024, 6, 1)
     chrome_time = int((now - datetime(1601, 1, 1)).total_seconds() * 1_000_000)
     rows = [
-        ('http://dup.com', 'Dup', chrome_time),
-        ('http://dup.com', 'Dup', chrome_time),
+        ('http://dup.com', 'Dup', chrome_time, 2),
+        ('http://dup.com', 'Dup', chrome_time, 1),
     ]
     monkeypatch.setattr(history_extractor.sqlite3, 'connect', lambda path: DummyConn(rows))
     db_path = make_temp_db()
