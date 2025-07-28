@@ -6,12 +6,16 @@ A powerful browser extension that allows you to search and chat with your browse
 
 - 🔍 **Semantic History Search**: Advanced search using HistoryHounder's semantic search capabilities
 - 🤖 **AI Q&A**: Ask questions about your browsing history using Ollama LLM
+  - **Statistical Questions**: "What is the most visited website?" with accurate visit count analysis
+  - **Domain-Specific Questions**: "How many times did I visit GitHub?" with visit count aggregation
+  - **Semantic Questions**: "What AI-related websites did I visit?" with content-based search
 - 📊 **History Analytics**: View statistics about your browsing patterns
 - 🎯 **Advanced Filtering**: Filter by time range and exclude specific domains
 - 🔗 **Quick Access**: Click on history items to revisit pages instantly
 - 🎨 **Modern UI**: Clean, intuitive interface that matches your browser's design
 - 🔄 **Backend Integration**: Full integration with HistoryHounder backend for enhanced AI features
 - 📡 **Real-time Processing**: Process and sync history data with the backend
+- 📋 **Sidepanel Interface**: Persistent workspace with advanced features, chat history, and statistics
 
 ## Installation
 
@@ -83,6 +87,20 @@ A powerful browser extension that allows you to search and chat with your browse
 2. Use the Q&A section to ask questions about your history
 3. Get intelligent answers based on your browsing patterns
 
+**Question Types Supported**:
+- **Statistical Questions**: "What is the most visited website?" - Returns accurate visit count analysis
+- **Domain-Specific Questions**: "How many times did I visit GitHub?" - Aggregates visit counts for specific domains
+- **Semantic Questions**: "What AI-related websites did I visit?" - Content-based search and analysis
+
+### Sidepanel Interface
+1. Right-click the HistoryHounder extension icon and select "Open side panel"
+2. Access a persistent workspace with advanced features
+3. Use the tabbed interface for different functionalities:
+   - **Search Tab**: Advanced search with filters and quick actions
+   - **Chat Tab**: AI Q&A with chat history and quick questions
+   - **Stats Tab**: Detailed browsing statistics and analytics
+4. Enjoy persistent chat history and enhanced workspace features
+
 ### Settings
 - Click the "Settings" button to customize your experience
 - Your preferences are automatically saved
@@ -132,6 +150,8 @@ extension/
 ├── popup.html            # Extension popup interface
 ├── popup.js              # Popup functionality
 ├── popup.css             # Popup styling
+├── sidepanel.html        # Sidepanel interface
+├── sidepanel.js          # Sidepanel functionality
 ├── content.js            # Content script for page enhancement
 ├── icons/                # Extension icons
 │   ├── icon16.png
@@ -169,6 +189,8 @@ python3 create_simple_icons.py
 - Make sure you've performed a search first
 - Check your internet connection (for AI features)
 - Try a different question format
+- Ensure the backend server is running and accessible
+- Check that Ollama is running with the correct model (default: llama3.2:latest)
 
 ## Contributing
 
