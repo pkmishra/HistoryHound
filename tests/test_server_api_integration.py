@@ -90,6 +90,102 @@ class TestServerAPIIntegration:
             }
         ]
     
+    @pytest.fixture
+    def comprehensive_history_data(self):
+        """Comprehensive browser history data for Q&A testing."""
+        return [
+            # GitHub visits
+            {
+                "id": "github1",
+                "url": "https://github.com/pkmishra/HistoryHound",
+                "title": "pkmishra/HistoryHound: Talk to your History in English",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 41
+            },
+            {
+                "id": "github2",
+                "url": "https://github.com/pkmishra/HistoryHound/commits/main/",
+                "title": "Commits · pkmishra/HistoryHound · GitHub",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 38
+            },
+            {
+                "id": "github3",
+                "url": "https://github.com/pkmishra/HistoryHound/tree/main/extension",
+                "title": "HistoryHound/extension at main · pkmishra/HistoryHound · GitHub",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 17
+            },
+            # LinkedIn visits
+            {
+                "id": "linkedin1",
+                "url": "https://www.linkedin.com/feed/",
+                "title": "LinkedIn Login, Sign in",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 578
+            },
+            {
+                "id": "linkedin2",
+                "url": "https://www.linkedin.com/notifications/?filter=all",
+                "title": "LinkedIn Login, Sign in",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 194
+            },
+            {
+                "id": "linkedin3",
+                "url": "https://www.linkedin.com/",
+                "title": "Log In or Sign Up",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 151
+            },
+            # AI-related visits
+            {
+                "id": "ai1",
+                "url": "https://lu.ma/2boq3b18",
+                "title": "The AI Foundry Series- San Ramon Chapter",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 3
+            },
+            {
+                "id": "ai2",
+                "url": "https://lu.ma/ai",
+                "title": "AI Events · Luma",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 2
+            },
+            # Shopping visits
+            {
+                "id": "amazon1",
+                "url": "https://www.amazon.com/",
+                "title": "Amazon.com",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 62
+            },
+            {
+                "id": "slickdeals1",
+                "url": "https://slickdeals.net/",
+                "title": "The Best Deals, Coupons, Promo Codes & Discounts",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 173
+            },
+            # News visits
+            {
+                "id": "news1",
+                "url": "https://timesofindia.indiatimes.com/?loc=in",
+                "title": "News - Breaking News, Latest News, India News, World News, Bollywood, Sports, Business and Political News",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 95
+            },
+            # Keybase visits
+            {
+                "id": "keybase1",
+                "url": "https://keybase.io/pkm",
+                "title": "pkm (Pradeep Kumar Mishra)",
+                "lastVisitTime": 1732737600000,
+                "visitCount": 5
+            }
+        ]
+    
     def test_process_history_endpoint(self, client, sample_history_data):
         """Test the /api/process-history endpoint."""
         response = client.post(
@@ -234,6 +330,332 @@ class TestServerAPIIntegration:
         
         # Check that we got an answer
         assert len(data["answer"]) > 0
+    
+    def test_qa_statistical_questions(self, client, comprehensive_history_data):
+        """Test Q&A with statistical questions."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test statistical questions
+        statistical_questions = [
+            "What is the most visited website?",
+            "What are the top 5 most visited websites?",
+            "Which website did I visit most frequently?",
+            "What are the most popular sites in my browsing history?",
+            "Show me the sites with highest visit counts"
+        ]
+        
+        for question in statistical_questions:
+            response = client.post(
+                "/api/qa",
+                json={
+                    "question": question,
+                    "top_k": 10
+                }
+            )
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "answer" in data
+            assert len(data["answer"]) > 0
+            
+            # Should mention LinkedIn as most visited (578 visits)
+            answer_lower = data["answer"].lower()
+            assert "linkedin" in answer_lower or "578" in answer_lower or "most visited" in answer_lower
+    
+    def test_qa_domain_specific_questions(self, client, comprehensive_history_data):
+        """Test Q&A with domain-specific questions."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test domain-specific questions
+        domain_questions = [
+            ("How many times did I visit github?", "github", 96),  # 41+38+17
+            ("How many times did I visit linkedin?", "linkedin", 923),  # 578+194+151
+            ("How many times did I visit amazon?", "amazon", 62),
+            ("How many times did I visit slickdeals?", "slickdeals", 173),
+            ("How many times did I visit timesofindia?", "timesofindia", 95),
+            ("How many times did I visit keybase?", "keybase", 5)
+        ]
+        
+        for question, domain, expected_min_visits in domain_questions:
+            response = client.post(
+                "/api/qa",
+                json={
+                    "question": question,
+                    "top_k": 10
+                }
+            )
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "answer" in data
+            assert len(data["answer"]) > 0
+            
+            # Should mention the domain and visit count
+            answer_lower = data["answer"].lower()
+            assert domain in answer_lower or "visit" in answer_lower
+    
+    def test_qa_semantic_questions(self, client, comprehensive_history_data):
+        """Test Q&A with semantic questions."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test semantic questions
+        semantic_questions = [
+            "What AI-related websites have I visited?",
+            "What shopping websites did I visit?",
+            "What news websites did I visit?",
+            "What development websites did I visit?",
+            "What social media sites did I visit?",
+            "What websites did I visit for deals?",
+            "What professional networking sites did I visit?"
+        ]
+        
+        for question in semantic_questions:
+            response = client.post(
+                "/api/qa",
+                json={
+                    "question": question,
+                    "top_k": 5
+                }
+            )
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "answer" in data
+            assert len(data["answer"]) > 0
+    
+    def test_qa_mixed_question_types(self, client, comprehensive_history_data):
+        """Test Q&A with mixed question types."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test mixed question types
+        mixed_questions = [
+            # Statistical + domain specific
+            "What is the most visited GitHub repository?",
+            "How many times did I visit LinkedIn compared to other sites?",
+            
+            # Semantic + specific
+            "What AI events did I look up?",
+            "What shopping deals did I find?",
+            
+            # Time-based
+            "What did I visit recently?",
+            "What websites did I visit most often?",
+            
+            # Category-based
+            "What professional websites did I visit?",
+            "What entertainment sites did I visit?",
+            "What news sources did I check?",
+            
+            # Specific content
+            "What deals did I find on SlickDeals?",
+            "What news did I read on Times of India?",
+            "What did I look up on Keybase?"
+        ]
+        
+        for question in mixed_questions:
+            response = client.post(
+                "/api/qa",
+                json={
+                    "question": question,
+                    "top_k": 5
+                }
+            )
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "answer" in data
+            assert len(data["answer"]) > 0
+    
+    def test_qa_edge_cases(self, client, comprehensive_history_data):
+        """Test Q&A with edge cases and unusual questions."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test edge cases
+        edge_case_questions = [
+            # Empty or very short questions
+            "What?",
+            "?",
+            "",
+            
+            # Very long questions
+            "What is the most visited website in my browsing history and can you tell me all about it in detail including when I visited it and how many times and what I was doing there?",
+            
+            # Questions with special characters
+            "What's the most visited site?",
+            "Which site did I visit the most?",
+            "What are my top 3 sites?",
+            
+            # Questions about non-existent domains
+            "How many times did I visit facebook.com?",
+            "What did I visit on twitter.com?",
+            "How many times did I visit youtube.com?",
+            
+            # Questions about specific content
+            "What deals did I find?",
+            "What news did I read?",
+            "What events did I look up?",
+            
+            # Questions about visit patterns
+            "When did I visit LinkedIn?",
+            "What time did I visit GitHub?",
+            "How often did I visit Amazon?"
+        ]
+        
+        for question in edge_case_questions:
+            response = client.post(
+                "/api/qa",
+                json={
+                    "question": question,
+                    "top_k": 5
+                }
+            )
+            
+            # Should handle gracefully
+            assert response.status_code in [200, 400, 422]
+            
+            if response.status_code == 200:
+                data = response.json()
+                assert data["success"] is True
+                assert "answer" in data
+    
+    def test_qa_parameter_validation(self, client, comprehensive_history_data):
+        """Test Q&A parameter validation."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test invalid parameters
+        invalid_requests = [
+            # Missing question
+            {},
+            
+            # Empty question
+            {"question": ""},
+            
+            # Invalid top_k
+            {"question": "What is the most visited website?", "top_k": 0},
+            {"question": "What is the most visited website?", "top_k": -1},
+            {"question": "What is the most visited website?", "top_k": 1000},
+            
+            # Wrong data types
+            {"question": 123, "top_k": 5},
+            {"question": "What is the most visited website?", "top_k": "five"},
+            
+            # Extra fields
+            {"question": "What is the most visited website?", "top_k": 5, "extra": "field"}
+        ]
+        
+        for request_data in invalid_requests:
+            response = client.post(
+                "/api/qa",
+                json=request_data
+            )
+            
+            # Should handle gracefully
+            assert response.status_code in [200, 400, 422]
+    
+    def test_qa_response_structure(self, client, comprehensive_history_data):
+        """Test Q&A response structure and content."""
+        # Process comprehensive history data
+        response = client.post(
+            "/api/process-history",
+            json={"history": comprehensive_history_data}
+        )
+        assert response.status_code == 200
+        
+        # Wait for processing
+        time.sleep(1)
+        
+        # Test response structure
+        response = client.post(
+            "/api/qa",
+            json={
+                "question": "What is the most visited website?",
+                "top_k": 5
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check required fields
+        assert "success" in data
+        assert "question" in data
+        assert "answer" in data
+        assert "sources" in data
+        assert "timestamp" in data
+        
+        # Check data types
+        assert isinstance(data["success"], bool)
+        assert isinstance(data["question"], str)
+        assert isinstance(data["answer"], str)
+        assert isinstance(data["sources"], list)
+        assert isinstance(data["timestamp"], str)
+        
+        # Check success
+        assert data["success"] is True
+        
+        # Check answer content
+        assert len(data["answer"]) > 0
+        
+        # Check sources structure
+        if len(data["sources"]) > 0:
+            source = data["sources"][0]
+            assert "content" in source
+            assert "url" in source
+            assert "title" in source
+            assert "visit_time" in source
+            assert "domain" in source
     
     def test_incremental_processing_behavior(self, client, sample_history_data):
         """Test that repeated processing shows incremental behavior."""
