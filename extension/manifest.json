@@ -7,7 +7,8 @@
     "history",
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "host_permissions": [
     "http://*/*",
@@ -19,6 +20,9 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "HistoryHounder - Chat with your history"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "content_scripts": [
     {

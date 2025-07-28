@@ -23,23 +23,9 @@ class TestVectorStoreIntegration:
     @pytest.fixture(autouse=True)
     def cleanup_vector_store(self):
         """Clean up the vector store before and after each test."""
-        # Clean up before test
-        try:
-            store = ChromaVectorStore(persist_directory='chroma_db')
-            store.clear()
-            store.close()
-        except Exception:
-            pass
-        
+        # This fixture is no longer needed since tests use isolated temp directories
+        # The temp_persist_dir fixture handles cleanup for each test
         yield
-        
-        # Clean up after test
-        try:
-            store = ChromaVectorStore(persist_directory='chroma_db')
-            store.clear()
-            store.close()
-        except Exception:
-            pass
     
     @pytest.fixture(autouse=True)
     def cleanup_temp_files(self):

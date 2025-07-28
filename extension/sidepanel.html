@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Sidepanel</title>
+    <style>
+        /* Sidepanel-specific styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 14px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidepanel-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+        }
+
+        .sidepanel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .app-subtitle {
+            font-size: 11px;
+            opacity: 0.9;
+            font-weight: 400;
+            margin: 0;
+        }
+
+        .sync-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .sync-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .sync-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sync-btn.syncing {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tab-navigation {
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .tab-list {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            background: #fff;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .tab-btn:hover {
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            background: #f8fafc;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0 12px;
+            transition: all 0.2s ease;
+        }
+
+        .search-input-wrapper:focus-within {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            color: #1e293b;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 6px;
+        }
+
+        .search-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .filters-panel {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-select,
+        .filter-input {
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+            background: white;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+
+        .filter-select:focus,
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .item-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.3;
+            margin: 0;
+            flex: 1;
+        }
+
+        .item-domain {
+            font-size: 10px;
+            color: #667eea;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+            margin-left: 6px;
+        }
+
+        .item-url {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 6px;
+            word-break: break-all;
+        }
+
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .item-visits {
+            background: #f1f5f9;
+            padding: 2px 4px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .ai-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .ai-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .ai-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 4px 0;
+        }
+
+        .ai-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .chat-history {
+            flex: 1;
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-y: auto;
+            min-height: 150px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            max-width: 85%;
+            font-size: 12px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .chat-message.assistant {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        .chat-message strong {
+            font-weight: 600;
+        }
+
+        .chat-message em {
+            font-style: italic;
+        }
+
+        .chat-message br {
+            margin-bottom: 4px;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0 12px;
+            transition: all 0.2s ease;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            background: transparent;
+            font-size: 12px;
+            color: #1e293b;
+            outline: none;
+        }
+
+        .chat-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .chat-send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 6px;
+        }
+
+        .chat-send-btn:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .stat-icon {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .top-domains {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .top-domains h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 12px 0;
+        }
+
+        .domains-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .domain-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            background: #f8fafc;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .domain-name {
+            font-size: 12px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .domain-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: #64748b;
+        }
+
+        .empty-state p {
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 20px 16px;
+            color: #64748b;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
+        }
+
+        .loading-text {
+            font-size: 11px;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 30px 16px;
+            color: #ef4444;
+        }
+
+        .error-text {
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .sources-section {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sources-section strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .sources-section ul {
+            margin: 0;
+            padding-left: 12px;
+        }
+
+        .sources-section li {
+            margin-bottom: 3px;
+        }
+
+        .sources-section a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 11px;
+        }
+
+        .sources-section a:hover {
+            text-decoration: underline;
+            color: white;
+        }
+
+        .chat-message.assistant .sources-section {
+            border-top-color: #e2e8f0;
+        }
+
+        .chat-message.assistant .sources-section strong {
+            color: #475569;
+        }
+
+        .chat-message.assistant .sources-section a {
+            color: #667eea;
+        }
+
+        .chat-message.assistant .sources-section a:hover {
+            color: #5a67d8;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .quick-action-btn {
+            flex: 1;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-action-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .quick-action-btn.secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .quick-action-btn.secondary:hover {
+            background: #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidepanel-container">
+        <!-- Header -->
+        <header class="sidepanel-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">🔍</div>
+                    <div class="logo-text">
+                        <h1 class="app-title">HistoryHounder</h1>
+                        <p class="app-subtitle">Smart History Search</p>
+                    </div>
+                </div>
+                <button id="syncBtn" class="sync-btn" title="Sync History">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 2v6h-6"/>
+                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                        <path d="M3 22v-6h6"/>
+                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <div class="tab-list">
+                <button class="tab-btn active" data-tab="search">Search</button>
+                <button class="tab-btn" data-tab="ai">AI Chat</button>
+                <button class="tab-btn" data-tab="stats">Stats</button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Search Tab -->
+            <div class="tab-content active" id="search-tab">
+                <div class="search-container">
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" id="searchToday">Today</button>
+                        <button class="quick-action-btn secondary" id="searchWeek">This Week</button>
+                        <button class="quick-action-btn secondary" id="searchMonth">This Month</button>
+                    </div>
+
+                    <div class="search-box">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="searchInput" placeholder="Search your browsing history..." class="search-input">
+                            <button id="searchBtn" class="search-btn">Search</button>
+                        </div>
+                    </div>
+
+                    <div class="filters-panel">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="daysFilter" class="filter-label">Time Range</label>
+                                <select id="daysFilter" class="filter-select">
+                                    <option value="">All time</option>
+                                    <option value="1">Last 24 hours</option>
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30">Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="ignoreDomains" class="filter-label">Exclude Domains</label>
+                                <input type="text" id="ignoreDomains" placeholder="google.com, facebook.com" class="filter-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="results-container">
+                        <div id="resultsList" class="results-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div class="tab-content" id="ai-tab">
+                <div class="ai-container">
+                    <div class="ai-header">
+                        <h3>AI Assistant</h3>
+                        <p class="ai-subtitle">Ask questions about your browsing history</p>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" id="askPatterns">My Patterns</button>
+                        <button class="quick-action-btn secondary" id="askRecent">Recent Activity</button>
+                        <button class="quick-action-btn secondary" id="askProductivity">Productivity</button>
+                    </div>
+                    
+                    <div class="chat-container">
+                        <div id="chatHistory" class="chat-history">
+                            <div class="empty-state">
+                                <p>Start a conversation about your browsing history...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="questionInput" placeholder="Ask about your browsing patterns..." class="chat-input">
+                            <button id="askBtn" class="chat-send-btn">→</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="tab-content" id="stats-tab">
+                <div class="stats-container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-number" id="totalVisits">-</div>
+                            <div class="stat-label">Total Visits</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🌐</div>
+                            <div class="stat-number" id="uniqueDomains">-</div>
+                            <div class="stat-label">Unique Domains</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-number" id="todayVisits">-</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-number" id="weekVisits">-</div>
+                            <div class="stat-label">This Week</div>
+                        </div>
+                    </div>
+                    
+                    <div class="top-domains">
+                        <h4>Most Visited Domains</h4>
+                        <div id="topDomainsList" class="domains-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html> 

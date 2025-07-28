@@ -84,27 +84,42 @@ def extract_history(browser, db_path, days=None, now=None):
         
         try:
             if browser.startswith('firefox'):
-                cursor.execute('SELECT url, title, last_visit_date FROM moz_places ORDER BY last_visit_date DESC')
-                for url, title, last_visit_date in cursor.fetchall():
+                cursor.execute('SELECT url, title, last_visit_date, visit_count FROM moz_places ORDER BY last_visit_date DESC')
+                for url, title, last_visit_date, visit_count in cursor.fetchall():
                     dt = firefox_time_to_datetime(last_visit_date)
                     if min_time and (dt is None or dt < min_time):
                         continue
-                    history.append({'url': url, 'title': title, 'last_visit_time': dt})
+                    history.append({
+                        'url': url, 
+                        'title': title, 
+                        'last_visit_time': dt,
+                        'visit_count': visit_count or 1
+                    })
             elif browser == 'safari':
                 cursor.execute('SELECT url, title, visit_time FROM history_items LEFT JOIN history_visits ON history_items.id = history_visits.history_item')
                 for url, title, visit_time in cursor.fetchall():
                     dt = safari_time_to_datetime(visit_time)
                     if min_time and (dt is None or dt < min_time):
                         continue
-                    history.append({'url': url, 'title': title, 'last_visit_time': dt})
+                    history.append({
+                        'url': url, 
+                        'title': title, 
+                        'last_visit_time': dt,
+                        'visit_count': 1  # Safari doesn't have visit_count in the same way
+                    })
             else:
                 # Chrome/Brave/Edge
-                cursor.execute('SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC')
-                for url, title, last_visit_time in cursor.fetchall():
+                cursor.execute('SELECT url, title, last_visit_time, visit_count FROM urls ORDER BY last_visit_time DESC')
+                for url, title, last_visit_time, visit_count in cursor.fetchall():
                     dt = chrome_time_to_datetime(last_visit_time)
                     if min_time and (dt is None or dt < min_time):
                         continue
-                    history.append({'url': url, 'title': title, 'last_visit_time': dt})
+                    history.append({
+                        'url': url, 
+                        'title': title, 
+                        'last_visit_time': dt,
+                        'visit_count': visit_count or 1
+                    })
         finally:
             conn.close()
     

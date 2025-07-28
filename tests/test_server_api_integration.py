@@ -26,12 +26,27 @@ class TestServerAPIIntegration:
         from fastapi.testclient import TestClient
         return TestClient(app)
     
+    @pytest.fixture
+    def test_vector_store_dir(self):
+        """Create a temporary directory for test vector store."""
+        temp_dir = tempfile.mkdtemp(prefix="test_chroma_")
+        yield temp_dir
+        # Clean up after test
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception:
+            pass
+    
     @pytest.fixture(autouse=True)
-    def cleanup_vector_store(self):
-        """Clean up the vector store before and after each test."""
+    def cleanup_vector_store(self, test_vector_store_dir):
+        """Clean up the test vector store before and after each test."""
+        # Set environment variable for test vector store directory
+        original_dir = os.environ.get("HISTORYHOUNDER_VECTOR_STORE_DIR")
+        os.environ["HISTORYHOUNDER_VECTOR_STORE_DIR"] = test_vector_store_dir
+        
         # Clean up before test
         try:
-            store = ChromaVectorStore(persist_directory='chroma_db')
+            store = ChromaVectorStore(persist_directory=test_vector_store_dir)
             store.clear()
             store.close()
         except Exception:
@@ -41,11 +56,17 @@ class TestServerAPIIntegration:
         
         # Clean up after test
         try:
-            store = ChromaVectorStore(persist_directory='chroma_db')
+            store = ChromaVectorStore(persist_directory=test_vector_store_dir)
             store.clear()
             store.close()
         except Exception:
             pass
+        
+        # Restore original environment variable
+        if original_dir is not None:
+            os.environ["HISTORYHOUNDER_VECTOR_STORE_DIR"] = original_dir
+        else:
+            os.environ.pop("HISTORYHOUNDER_VECTOR_STORE_DIR", None)
     
     @pytest.fixture(autouse=True)
     def cleanup_temp_files(self):

@@ -11,16 +11,22 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('HistoryHounder extension installed');
 });
 
-// Handle messages from popup
+// Handle messages from popup and sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case 'searchHistory':
-      searchHistory(request.query, request.filters)
+      searchHistory(request.text || request.query, request.filters || request)
         .then(results => sendResponse({ success: true, results }))
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true; // Keep message channel open for async response
       
     case 'getHistoryStats':
+      getHistoryStats(request.filters)
+        .then(stats => sendResponse({ success: true, stats }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+      
+    case 'getStats':
       getHistoryStats(request.filters)
         .then(stats => sendResponse({ success: true, stats }))
         .catch(error => sendResponse({ success: false, error: error.message }));
@@ -40,7 +46,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
     case 'askQuestion':
       askQuestion(request.question, request.history)
-        .then(answer => sendResponse({ success: true, answer }))
+        .then(result => sendResponse({ success: true, answer: result.answer, sources: result.sources }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+      
+    case 'syncHistoryToBackend':
+      syncHistoryToBackend()
+        .then(result => sendResponse({ success: true, ...result }))
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
       
@@ -385,8 +397,38 @@ async function updateSettings(settings) {
 
 // Clear cache
 async function clearCache() {
-  historyCache.clear();
-  lastCacheTime = 0;
+  try {
+    // Clear local cache
+    historyCache.clear();
+    lastCacheTime = 0;
+    
+    // Clear backend cache
+    const settings = await chrome.storage.sync.get(['backendUrl']);
+    const backendUrl = settings.backendUrl || 'http://localhost:8080';
+    
+    const response = await fetch(`${backendUrl}/api/clear-cache`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Backend clear cache error:', errorText);
+      throw new Error(`Backend clear cache failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log('Cache cleared successfully:', result.message);
+    
+  } catch (error) {
+    console.error('Clear cache failed:', error);
+    // Still clear local cache even if backend fails
+    historyCache.clear();
+    lastCacheTime = 0;
+    throw error;
+  }
 }
 
 // Store selected text
@@ -407,4 +449,78 @@ function handlePageAnalysis(pageInfo) {
   chrome.storage.local.set({
     lastPageInfo: pageInfo
   });
+}
+
+// Sync history to backend
+async function syncHistoryToBackend() {
+  try {
+    const settings = await chrome.storage.sync.get(['backendUrl']);
+    const backendUrl = settings.backendUrl || 'http://localhost:8080';
+    
+    // Get fresh history data
+    const historyData = await getFreshHistoryData();
+    
+    if (!historyData || historyData.length === 0) {
+      return { message: 'No history data to sync' };
+    }
+    
+    // Transform Chrome history data to backend format
+    const transformedHistory = historyData.map(item => {
+      // Ensure we have a valid ID
+      const id = item.id || String(Date.now() + Math.random());
+      
+      // Handle timestamp - Chrome returns milliseconds since Unix epoch, backend expects the same
+      let lastVisitTime = item.lastVisitTime;
+      if (lastVisitTime) {
+        // Chrome history API returns milliseconds since Unix epoch
+        // Backend expects milliseconds since Unix epoch (not microseconds)
+        // Just ensure it's an integer
+        lastVisitTime = Math.floor(lastVisitTime);
+      } else {
+        lastVisitTime = Math.floor(Date.now()); // Current time in milliseconds
+      }
+      
+      return {
+        id: id,
+        url: item.url,
+        title: item.title || 'Untitled',
+        lastVisitTime: lastVisitTime,
+        visitCount: item.visitCount || 1
+      };
+    });
+    
+    console.log('Sending history data:', transformedHistory.slice(0, 3)); // Log first 3 items for debugging
+    
+    // Send to backend
+    const response = await fetch(`${backendUrl}/api/process-history`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        history: transformedHistory
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Backend error response:', errorText);
+      throw new Error(`Backend sync failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    
+    // Clear cache after successful sync
+    await clearCache();
+    
+    return {
+      message: 'History synced successfully',
+      processed_count: result.processed_count || 0,
+      status: result.status || 'unknown'
+    };
+    
+  } catch (error) {
+    console.error('Sync to backend failed:', error);
+    throw new Error(`Failed to sync history: ${error.message}`);
+  }
 } 
