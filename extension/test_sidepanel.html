@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Sidepanel Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin: 0 0 12px 0;
+            color: #1e293b;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #5a67d8;
+        }
+        .test-result {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #22c55e;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>HistoryHounder Sidepanel Test</h1>
+        <p>This page tests the sidepanel functionality for the HistoryHounder extension.</p>
+        
+        <div class="test-section">
+            <h3>1. Sidepanel Access</h3>
+            <p>To access the sidepanel:</p>
+            <ol>
+                <li>Right-click on the HistoryHounder extension icon</li>
+                <li>Select "Open side panel" or "Show side panel"</li>
+                <li>The sidepanel should open on the right side of the browser</li>
+            </ol>
+            <button class="test-button" onclick="testSidepanelAccess()">Test Sidepanel Access</button>
+            <div id="sidepanel-test-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Extension Functionality</h3>
+            <p>Test the core extension features:</p>
+            <button class="test-button" onclick="testSearchHistory()">Test Search History</button>
+            <button class="test-button" onclick="testGetStats()">Test Get Stats</button>
+            <button class="test-button" onclick="testSyncHistory()">Test Sync History</button>
+            <button class="test-button" onclick="testAskQuestion()">Test Ask Question</button>
+            <div id="functionality-test-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Backend Connection</h3>
+            <p>Test connection to the HistoryHounder backend:</p>
+            <button class="test-button" onclick="testBackendHealth()">Test Backend Health</button>
+            <div id="backend-test-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. Sidepanel Features</h3>
+            <p>Expected sidepanel features:</p>
+            <ul>
+                <li><strong>Search Tab:</strong> Search browsing history with filters</li>
+                <li><strong>AI Chat Tab:</strong> Ask questions about browsing history</li>
+                <li><strong>Stats Tab:</strong> View browsing statistics</li>
+                <li><strong>Sync Button:</strong> Sync history to backend</li>
+                <li><strong>Quick Actions:</strong> Pre-defined search and question buttons</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        async function testSidepanelAccess() {
+            try {
+                // Check if sidepanel API is available
+                if (typeof chrome !== 'undefined' && chrome.sidePanel) {
+                    showResult('sidepanel-test-result', '✅ Sidepanel API is available\n\nTo open the sidepanel:\n1. Right-click the extension icon\n2. Select "Open side panel"\n3. The sidepanel should appear on the right', true);
+                } else {
+                    showResult('sidepanel-test-result', '⚠️ Sidepanel API not available\n\nThis might be because:\n- Chrome version is too old\n- Extension needs to be reloaded\n- Sidepanel permission not granted', false);
+                }
+            } catch (error) {
+                showResult('sidepanel-test-result', `❌ Error testing sidepanel: ${error.message}`, false);
+            }
+        }
+
+        async function testSearchHistory() {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'searchHistory',
+                    text: 'test',
+                    filters: { days: 1 }
+                });
+                
+                if (response.success) {
+                    showResult('functionality-test-result', `✅ Search History Test Passed\n\nResults: ${response.results?.length || 0} items found`, true);
+                } else {
+                    showResult('functionality-test-result', `❌ Search History Test Failed\n\nError: ${response.error}`, false);
+                }
+            } catch (error) {
+                showResult('functionality-test-result', `❌ Search History Test Error: ${error.message}`, false);
+            }
+        }
+
+        async function testGetStats() {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'getStats'
+                });
+                
+                if (response.success) {
+                    showResult('functionality-test-result', `✅ Get Stats Test Passed\n\nStats: ${JSON.stringify(response.stats, null, 2)}`, true);
+                } else {
+                    showResult('functionality-test-result', `❌ Get Stats Test Failed\n\nError: ${response.error}`, false);
+                }
+            } catch (error) {
+                showResult('functionality-test-result', `❌ Get Stats Test Error: ${error.message}`, false);
+            }
+        }
+
+        async function testSyncHistory() {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'syncHistoryToBackend'
+                });
+                
+                if (response.success) {
+                    showResult('functionality-test-result', `✅ Sync History Test Passed\n\nMessage: ${response.message}\nProcessed: ${response.processed_count} items`, true);
+                } else {
+                    showResult('functionality-test-result', `❌ Sync History Test Failed\n\nError: ${response.error}`, false);
+                }
+            } catch (error) {
+                showResult('functionality-test-result', `❌ Sync History Test Error: ${error.message}`, false);
+            }
+        }
+
+        async function testAskQuestion() {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'askQuestion',
+                    question: 'What sites did I visit today?'
+                });
+                
+                if (response.success) {
+                    showResult('functionality-test-result', `✅ Ask Question Test Passed\n\nAnswer: ${response.answer?.substring(0, 100)}...\nSources: ${response.sources?.length || 0}`, true);
+                } else {
+                    showResult('functionality-test-result', `❌ Ask Question Test Failed\n\nError: ${response.error}`, false);
+                }
+            } catch (error) {
+                showResult('functionality-test-result', `❌ Ask Question Test Error: ${error.message}`, false);
+            }
+        }
+
+        async function testBackendHealth() {
+            try {
+                const response = await fetch('http://localhost:8080/api/health');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('backend-test-result', `✅ Backend Health Test Passed\n\nStatus: ${data.status}\nBackend Available: ${data.backend_available}`, true);
+                } else {
+                    showResult('backend-test-result', `❌ Backend Health Test Failed\n\nStatus: ${response.status} ${response.statusText}`, false);
+                }
+            } catch (error) {
+                showResult('backend-test-result', `❌ Backend Health Test Error: ${error.message}\n\nMake sure the HistoryHounder backend server is running on http://localhost:8080`, false);
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 OLLAMA_MODEL = os.getenv("HISTORYHOUNDER_OLLAMA_MODEL", "llama3.2:latest")
+# Allow tests to override the vector store directory
+VECTOR_STORE_DIR = os.getenv("HISTORYHOUNDER_VECTOR_STORE_DIR", "chroma_db")
 
 # Pydantic Models for API
 class HealthResponse(BaseModel):
@@ -455,7 +457,7 @@ async def process_history(request: ProcessHistoryRequest):
             from .pipeline import extract_and_process_history
             
             # Get existing URLs from vector store to avoid reprocessing
-            store = ChromaVectorStore(persist_directory='chroma_db')
+            store = ChromaVectorStore(persist_directory=VECTOR_STORE_DIR)
             existing_count = store.count()
             logger.info(f"Current vector store count: {existing_count}")
             
@@ -537,7 +539,7 @@ async def process_history(request: ProcessHistoryRequest):
                 with_content=True,
                 embed=True,
                 embedder_backend='sentence-transformers',
-                persist_directory='chroma_db',
+                persist_directory=VECTOR_STORE_DIR,
                 existing_urls=existing_urls  # Pass existing URLs to avoid reprocessing
             )
             logger.info(f"Pipeline returned status: {result.get('status')}, results count: {len(result.get('results', []))}")
@@ -684,7 +686,7 @@ async def get_stats():
     
     try:
         # Get vector store statistics
-        store = ChromaVectorStore(persist_directory='chroma_db')
+        store = ChromaVectorStore(persist_directory=VECTOR_STORE_DIR)
         
         try:
             # Get actual document count from ChromaDB
@@ -716,7 +718,7 @@ async def get_stats():
                 'collections': 1,
                 'documents': document_count,
                 'status': 'available',
-                'vector_store_path': 'chroma_db',
+                'vector_store_path': VECTOR_STORE_DIR,
                 'sample_documents': sample_docs
             }
         except Exception as e:
@@ -726,7 +728,7 @@ async def get_stats():
                 'collections': 1,
                 'documents': 0,
                 'status': 'available',
-                'vector_store_path': 'chroma_db',
+                'vector_store_path': VECTOR_STORE_DIR,
                 'sample_documents': []
             }
         finally:
@@ -745,11 +747,91 @@ async def get_stats():
         )
 
 # Ollama model configuration
+class ClearCacheResponse(BaseModel):
+    """Clear cache response model"""
+    success: bool = Field(..., description="Cache clear success status")
+    message: str = Field(..., description="Clear cache status message")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
+
 class OllamaModelResponse(BaseModel):
     """Ollama model configuration response"""
     current_model: str = Field(..., description="Currently configured model")
     available_models: List[str] = Field(default=[], description="List of available models")
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
+
+@app.post(
+    "/api/clear-cache",
+    response_model=ClearCacheResponse,
+    summary="Clear Cache",
+    description="Clear vector store and history database",
+    responses={
+        200: {"description": "Cache cleared successfully"},
+        503: {"model": ErrorResponse, "description": "HistoryHounder backend unavailable"},
+        500: {"model": ErrorResponse, "description": "Internal server error"}
+    },
+    tags=["System"]
+)
+async def clear_cache():
+    """Clear vector store and history database"""
+    if not HISTORYHOUNDER_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="HistoryHounder backend not available"
+        )
+    
+    try:
+        import shutil
+        import os
+        
+        cleared_items = []
+        
+        # Clear vector store
+        if os.path.exists(VECTOR_STORE_DIR):
+            try:
+                store = ChromaVectorStore(persist_directory=VECTOR_STORE_DIR)
+                store.clear()
+                store.close()
+                cleared_items.append('vector store')
+            except Exception as e:
+                logger.warning(f"Failed to clear vector store: {e}")
+        
+        # Clear history database
+        if os.path.exists('history_db'):
+            try:
+                shutil.rmtree('history_db')
+                cleared_items.append('history database')
+            except Exception as e:
+                logger.warning(f"Failed to clear history database: {e}")
+        
+        if cleared_items:
+            message = f"Successfully cleared: {', '.join(cleared_items)}"
+        else:
+            message = "No cache to clear"
+        
+        return ClearCacheResponse(
+            success=True,
+            message=message
+        )
+        
+    except Exception as e:
+        logger.error(f"Clear cache error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Clear cache failed: {str(e)}"
+        )
+
+@app.options("/api/clear-cache")
+async def options_clear_cache():
+    """Handle OPTIONS requests for clear-cache endpoint"""
+    return JSONResponse(
+        status_code=200,
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.get(
     "/api/ollama/model",
@@ -819,6 +901,7 @@ async def startup_event():
     logger.info("HistoryHounder API server starting...")
     logger.info(f"HistoryHounder backend available: {HISTORYHOUNDER_AVAILABLE}")
     logger.info(f"Ollama model: {OLLAMA_MODEL}")
+    logger.info(f"Vector store directory: {VECTOR_STORE_DIR}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
