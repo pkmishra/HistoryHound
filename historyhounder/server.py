@@ -247,11 +247,24 @@ async def search_history(
         # Format results for API
         formatted_results = []
         for result in results:
+            # Format visit_time if it exists
+            visit_time = result.get('visit_time', '')
+            if visit_time:
+                if isinstance(visit_time, datetime):
+                    visit_time = visit_time.strftime('%Y-%m-%d %H:%M:%S')
+                elif isinstance(visit_time, str):
+                    # If it's already a string, try to parse and format it
+                    try:
+                        dt = datetime.fromisoformat(visit_time.replace('Z', '+00:00'))
+                        visit_time = dt.strftime('%Y-%m-%d %H:%M:%S')
+                    except:
+                        pass  # Keep original if parsing fails
+            
             formatted_results.append(SearchResult(
                 title=result.get('title', 'Untitled'),
                 url=result.get('url', ''),
                 content=result.get('document', ''),
-                visit_time=result.get('visit_time', ''),
+                visit_time=visit_time,
                 domain=result.get('domain', ''),
                 distance=result.get('distance', 0.0)
             ))
@@ -360,59 +373,252 @@ async def process_history(request: ProcessHistoryRequest):
             from .embedder import get_embedder
             from .vector_store import ChromaVectorStore
             from .utils import convert_metadata_for_chroma
+            import tempfile
+            import sqlite3
+            from datetime import datetime
             
-            # Fetch content for each history item
-            processed_data = []
+            # Create a persistent SQLite database from the extension data
+            import os
+            db_dir = 'history_db'
+            os.makedirs(db_dir, exist_ok=True)
+            db_path = os.path.join(db_dir, 'extension_history.sqlite')
+            
+            # Create the SQLite database with Chrome-compatible schema
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Create the urls table (Chrome-compatible schema) if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS urls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT,
+                    title TEXT,
+                    visit_count INTEGER,
+                    typed_count INTEGER,
+                    last_visit_time INTEGER,
+                    hidden INTEGER DEFAULT 0
+                )
+            ''')
+            
+            # Insert the history data
             for item in history_data:
-                try:
-                    # Fetch content from URL
-                    content = fetch_and_extract(item['url'])
-                    processed_item = {**item, **content}
-                    processed_data.append(processed_item)
-                except Exception as e:
-                    logger.warning(f"Failed to fetch content for {item['url']}: {e}")
-                    # Add item without content if fetching fails
-                    processed_data.append(item)
-            
-            # Embed and store in vector store
-            if processed_data:
-                # Filter out documents with errors or empty text/description
-                valid_results = [r for r in processed_data if not r.get('error') and (r.get('text') or r.get('description') or r.get('title'))]
+                # Chrome history API returns timestamps in milliseconds since Unix epoch
+                # We need to convert to Chrome's internal format (microseconds since 1601-01-01)
+                chrome_time = item['lastVisitTime']
                 
-                if valid_results:
-                    embedder = get_embedder('sentence-transformers')
-                    docs = [r.get('text') or r.get('description') or r.get('title', '') for r in valid_results]
-                    embeddings = embedder.embed(docs)
-                    metadatas = [
-                        convert_metadata_for_chroma({k: v for k, v in r.items() if k not in ('text', 'description')})
-                        for r in valid_results
-                    ]
-                    store = ChromaVectorStore(persist_directory='chroma_db')
-                    store.add(docs, embeddings, metadatas)
-                    store.close()
-                    
-                    return ProcessHistoryResponse(
-                        success=True,
-                        processed_count=len(valid_results),
-                        message=f"History data processed successfully. {len(valid_results)} items embedded."
-                    )
+                # Convert from milliseconds since Unix epoch to microseconds since Chrome epoch (1601-01-01)
+                # Chrome epoch starts at 1601-01-01 00:00:00 UTC
+                # Unix epoch starts at 1970-01-01 00:00:00 UTC
+                # Difference: 11644473600000 milliseconds
+                # Convert to microseconds and add Chrome epoch offset
+                unix_milliseconds = chrome_time
+                chrome_microseconds = (unix_milliseconds * 1000) + (11644473600000 * 1000)
+                
+                cursor.execute('''
+                    INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    item['url'],
+                    item['title'],
+                    item['visitCount'],
+                    0,  # typed_count
+                    chrome_microseconds,
+                    0   # hidden
+                ))
             
-            return ProcessHistoryResponse(
-                success=True,
-                processed_count=len(processed_data),
-                message="History data processed successfully (no content fetched)"
+            conn.commit()
+            conn.close()
+            
+            # Now process through the HistoryHounder pipeline with incremental processing
+            from .pipeline import extract_and_process_history
+            
+            # Get existing URLs from vector store to avoid reprocessing
+            store = ChromaVectorStore(persist_directory='chroma_db')
+            existing_count = store.count()
+            logger.info(f"Current vector store count: {existing_count}")
+            
+            # Get existing URLs from the vector store
+            existing_urls = set()
+            if existing_count > 0:
+                try:
+                    # Get all documents to extract URLs
+                    results = store.collection.get(include=['metadatas'])
+                    if results and results['metadatas']:
+                        existing_urls = {meta.get('url', '') for meta in results['metadatas'] if meta.get('url')}
+                        logger.info(f"Found {len(existing_urls)} existing URLs in vector store")
+                except Exception as e:
+                    logger.warning(f"Could not get existing URLs: {e}")
+            
+            store.close()
+            
+            # Create a temporary database with only the current request URLs
+            import tempfile
+            temp_db_path = tempfile.mktemp(suffix='.sqlite')
+            
+            # Create the temporary SQLite database with Chrome-compatible schema
+            conn = sqlite3.connect(temp_db_path)
+            cursor = conn.cursor()
+            
+            # Create the urls table (Chrome-compatible schema)
+            cursor.execute('''
+                CREATE TABLE urls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT,
+                    title TEXT,
+                    visit_count INTEGER,
+                    typed_count INTEGER,
+                    last_visit_time INTEGER,
+                    hidden INTEGER DEFAULT 0
+                )
+            ''')
+            
+            # Insert only the current request history data
+            for item in history_data:
+                # Chrome history API returns timestamps in milliseconds since Unix epoch
+                # We need to convert to Chrome's internal format (microseconds since 1601-01-01)
+                chrome_time = item['lastVisitTime']
+                
+                # Convert from milliseconds since Unix epoch to microseconds since Chrome epoch (1601-01-01)
+                # Chrome epoch starts at 1601-01-01 00:00:00 UTC
+                # Unix epoch starts at 1970-01-01 00:00:00 UTC
+                # Difference: 11644473600000 milliseconds
+                # Convert to microseconds and add Chrome epoch offset
+                unix_milliseconds = chrome_time
+                chrome_microseconds = (unix_milliseconds * 1000) + (11644473600000 * 1000)
+                
+                cursor.execute('''
+                    INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    item['url'],
+                    item['title'],
+                    item['visitCount'],
+                    0,  # typed_count
+                    chrome_microseconds,
+                    0   # hidden
+                ))
+            
+            conn.commit()
+            conn.close()
+            
+            # Extract and process history using the temporary database (only current request URLs)
+            logger.info(f"Calling pipeline with temp_db_path={temp_db_path}, with_content=True, embed=True")
+            result = extract_and_process_history(
+                browser='chrome',  # Assume Chrome format
+                db_path=temp_db_path,
+                with_content=True,
+                embed=True,
+                embedder_backend='sentence-transformers',
+                persist_directory='chroma_db',
+                existing_urls=existing_urls  # Pass existing URLs to avoid reprocessing
             )
+            logger.info(f"Pipeline returned status: {result.get('status')}, results count: {len(result.get('results', []))}")
+            
+            # Clean up temporary database
+            try:
+                os.remove(temp_db_path)
+            except:
+                pass
+            
+            # Return results based on pipeline status
+            if result['status'] == 'embedded':
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=result['num_embedded'],
+                    message=f"History data processed successfully. {result['num_embedded']} new items embedded and stored in vector database."
+                )
+            elif result['status'] == 'fetched':
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=len(result['results']),
+                    message=f"History data processed successfully. {len(result['results'])} items fetched but not embedded."
+                )
+            elif result['status'] == 'no_valid_documents':
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=0,
+                    message="History data processed but no valid documents found for embedding."
+                )
+            elif result['status'] == 'no_new_documents':
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=0,
+                    message="No new history items found. All existing data is already processed."
+                )
+            else:
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=len(result['results']),
+                    message=f"History data processed with status: {result['status']}"
+                )
             
         except ImportError as e:
             # Fallback if dependencies are not available
             logger.warning(f"Pipeline dependencies not available: {e}")
-            processed_data = history_data
             
-            return ProcessHistoryResponse(
-                success=True,
-                processed_count=len(processed_data),
-                message="History data processed successfully (simplified - no embedding)"
-            )
+            # Even in fallback mode, we can still create the SQLite database
+            try:
+                import sqlite3
+                import os
+                
+                # Create a persistent SQLite database from the extension data
+                db_dir = 'history_db'
+                os.makedirs(db_dir, exist_ok=True)
+                db_path = os.path.join(db_dir, 'extension_history.sqlite')
+                
+                # Create the SQLite database with Chrome-compatible schema
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                # Create the urls table (Chrome-compatible schema) if it doesn't exist
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS urls (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        url TEXT,
+                        title TEXT,
+                        visit_count INTEGER,
+                        typed_count INTEGER,
+                        last_visit_time INTEGER,
+                        hidden INTEGER DEFAULT 0
+                    )
+                ''')
+                
+                # Insert the history data
+                for item in history_data:
+                    # Convert timestamp to Chrome format (microseconds since 1601-01-01)
+                    chrome_time = item['lastVisitTime']
+                    if chrome_time < 1000000000000:
+                        # If it's in milliseconds, convert to microseconds
+                        chrome_time = chrome_time * 1000
+                    
+                    cursor.execute('''
+                        INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        item['url'],
+                        item['title'],
+                        item['visitCount'],
+                        0,  # typed_count
+                        chrome_time,
+                        0   # hidden
+                    ))
+                
+                conn.commit()
+                conn.close()
+                
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=len(history_data),
+                    message=f"History data stored in SQLite format. {len(history_data)} items processed (embedding not available)."
+                )
+                
+            except Exception as db_error:
+                logger.error(f"Failed to create SQLite database: {db_error}")
+                return ProcessHistoryResponse(
+                    success=True,
+                    processed_count=len(history_data),
+                    message="History data processed successfully (simplified - no embedding or database storage)"
+                )
         
     except HTTPException:
         raise
@@ -445,15 +651,40 @@ async def get_stats():
     
     try:
         # Get vector store statistics
-        store = ChromaVectorStore()
+        store = ChromaVectorStore(persist_directory='chroma_db')
         
         try:
             # Get actual document count from ChromaDB
             document_count = store.count()
+            
+            # Get sample documents to show what's stored
+            sample_docs = []
+            if document_count > 0:
+                try:
+                    # Get a few sample documents
+                    results = store.collection.query(
+                        query_embeddings=[[0.0] * 768],  # Dummy embedding
+                        n_results=min(5, document_count),
+                        include=["metadatas", "documents"]
+                    )
+                    if results['metadatas'] and results['metadatas'][0]:
+                        sample_docs = [
+                            {
+                                'url': meta.get('url', 'Unknown'),
+                                'title': meta.get('title', 'Unknown'),
+                                'timestamp': meta.get('last_visit_time', 'Unknown')
+                            }
+                            for meta in results['metadatas'][0]
+                        ]
+                except Exception as e:
+                    logger.warning(f"Failed to get sample documents: {e}")
+            
             stats = {
                 'collections': 1,
                 'documents': document_count,
-                'status': 'available'
+                'status': 'available',
+                'vector_store_path': 'chroma_db',
+                'sample_documents': sample_docs
             }
         except Exception as e:
             logger.warning(f"Failed to get document count: {e}")
@@ -461,7 +692,9 @@ async def get_stats():
             stats = {
                 'collections': 1,
                 'documents': 0,
-                'status': 'available'
+                'status': 'available',
+                'vector_store_path': 'chroma_db',
+                'sample_documents': []
             }
         finally:
             store.close()
