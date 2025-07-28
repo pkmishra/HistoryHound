@@ -403,16 +403,19 @@ async def process_history(request: ProcessHistoryRequest):
             # Insert the history data
             for item in history_data:
                 # Chrome history API returns timestamps in milliseconds since Unix epoch
-                # We need to convert to Chrome's internal format (microseconds since 1601-01-01)
                 chrome_time = item['lastVisitTime']
                 
-                # Convert from milliseconds since Unix epoch to microseconds since Chrome epoch (1601-01-01)
-                # Chrome epoch starts at 1601-01-01 00:00:00 UTC
-                # Unix epoch starts at 1970-01-01 00:00:00 UTC
-                # Difference: 11644473600000 milliseconds
-                # Convert to microseconds and add Chrome epoch offset
+                # Convert from milliseconds since Unix epoch to seconds for SQLite storage
                 unix_milliseconds = chrome_time
-                chrome_microseconds = (unix_milliseconds * 1000) + (11644473600000 * 1000)
+                
+                # Validate timestamp bounds to prevent SQLite overflow
+                if unix_milliseconds < 0 or unix_milliseconds > 9999999999999:  # Reasonable bounds
+                    logger.warning(f"Invalid timestamp value: {unix_milliseconds}, using current time")
+                    unix_milliseconds = int(datetime.now().timestamp() * 1000)
+                
+                # Convert to Unix timestamp (seconds since epoch) for SQLite storage
+                # This avoids the very large Chrome microseconds format that can overflow SQLite INTEGER
+                unix_seconds = unix_milliseconds // 1000
                 
                 cursor.execute('''
                     INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
@@ -422,7 +425,7 @@ async def process_history(request: ProcessHistoryRequest):
                     item['title'],
                     item['visitCount'],
                     0,  # typed_count
-                    chrome_microseconds,
+                    unix_seconds,
                     0   # hidden
                 ))
             
@@ -484,6 +487,12 @@ async def process_history(request: ProcessHistoryRequest):
                 # Difference: 11644473600000 milliseconds
                 # Convert to microseconds and add Chrome epoch offset
                 unix_milliseconds = chrome_time
+                
+                # Validate timestamp bounds to prevent SQLite overflow
+                if unix_milliseconds < 0 or unix_milliseconds > 9999999999999:  # Reasonable bounds
+                    logger.warning(f"Invalid timestamp value: {unix_milliseconds}, using current time")
+                    unix_milliseconds = int(datetime.now().timestamp() * 1000)
+                
                 chrome_microseconds = (unix_milliseconds * 1000) + (11644473600000 * 1000)
                 
                 cursor.execute('''
@@ -585,11 +594,16 @@ async def process_history(request: ProcessHistoryRequest):
                 
                 # Insert the history data
                 for item in history_data:
-                    # Convert timestamp to Chrome format (microseconds since 1601-01-01)
+                    # Convert timestamp to Unix seconds for SQLite storage
                     chrome_time = item['lastVisitTime']
-                    if chrome_time < 1000000000000:
-                        # If it's in milliseconds, convert to microseconds
-                        chrome_time = chrome_time * 1000
+                    
+                    # Validate timestamp bounds to prevent SQLite overflow
+                    if chrome_time < 0 or chrome_time > 9999999999999:  # Reasonable bounds
+                        logger.warning(f"Invalid timestamp value: {chrome_time}, using current time")
+                        chrome_time = int(datetime.now().timestamp() * 1000)
+                    
+                    # Convert to Unix timestamp (seconds since epoch) for SQLite storage
+                    unix_seconds = chrome_time // 1000
                     
                     cursor.execute('''
                         INSERT INTO urls (url, title, visit_count, typed_count, last_visit_time, hidden)
@@ -599,7 +613,7 @@ async def process_history(request: ProcessHistoryRequest):
                         item['title'],
                         item['visitCount'],
                         0,  # typed_count
-                        chrome_time,
+                        unix_seconds,
                         0   # hidden
                     ))
                 

@@ -267,11 +267,16 @@ async function syncHistoryToBackend() {
   }
   
   try {
-    showStatus('Syncing history to backend...', 'info');
+    showStatus('Clearing cache and fetching latest history...', 'info');
     
-    // Get recent history from Chrome via background script
+    // Clear cache first to ensure we get the latest history
+    await chrome.runtime.sendMessage({
+      action: 'clearCache'
+    });
+    
+    // Get fresh history data from Chrome (bypasses 5-minute cache)
     const historyResponse = await chrome.runtime.sendMessage({
-      action: 'getHistoryData',
+      action: 'getFreshHistoryData',
       filters: {}
     });
     
@@ -281,17 +286,56 @@ async function syncHistoryToBackend() {
     
     let history = historyResponse.results;
     console.log('Raw history:', history);
-    // Filter/map to required fields and correct types
-    const filteredHistory = history.map(item => ({
-      id: String(item.id ?? item.url ?? ''),
-      url: String(item.url ?? ''),
-      title: String(item.title ?? ''),
-      lastVisitTime: Number(item.lastVisitTime ?? 0),
-      visitCount: Number(item.visitCount ?? 1)
-    }));
+    
+    if (!history || history.length === 0) {
+      showStatus('No history data found. Please check your browser history.', 'error');
+      return;
+    }
+    
+    // Validate and filter history data
+    const filteredHistory = history
+      .filter(item => {
+        // Ensure required fields exist
+        if (!item.url || !item.title) {
+          console.warn('Skipping item with missing required fields:', item);
+          return false;
+        }
+        return true;
+      })
+      .map(item => {
+        // Convert lastVisitTime to integer (remove decimal part) and ensure microseconds
+        let lastVisitTime = Math.floor(Number(item.lastVisitTime ?? 0));
+        
+        // Ensure it's in microseconds (Chrome uses microseconds)
+        if (lastVisitTime < 1000000000000) {
+          // If it's in milliseconds, convert to microseconds
+          lastVisitTime = lastVisitTime * 1000;
+        }
+        
+        return {
+          id: String(item.id ?? item.url ?? ''),
+          url: String(item.url ?? ''),
+          title: String(item.title ?? ''),
+          lastVisitTime: lastVisitTime,
+          visitCount: Number(item.visitCount ?? 1)
+        };
+      });
+    
     console.log('Filtered history:', filteredHistory);
+    console.log('Sample item:', filteredHistory[0]);
+    
+    if (filteredHistory.length === 0) {
+      showStatus('No valid history items found to sync', 'error');
+      return;
+    }
     
     // Send to backend
+    console.log('Sending history to backend:', {
+      history: filteredHistory,
+      count: filteredHistory.length,
+      sample: filteredHistory[0]
+    });
+    
     const response = await fetch(`${backendUrl}/api/process-history`, {
       method: 'POST',
       headers: {
@@ -302,10 +346,21 @@ async function syncHistoryToBackend() {
       })
     });
     
+    console.log('Backend response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Backend error response:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
     const result = await response.json();
+    console.log('Backend response:', result);
     
     if (result.success) {
-      showStatus(`✅ History synced successfully! Processed ${result.processed_count} items.`, 'success');
+      const message = `✅ History synced successfully! 
+Processed ${result.processed_count} items from ${filteredHistory.length} total history entries.`;
+      showStatus(message, 'success');
     } else {
       showStatus(`❌ History sync failed: ${result.error}`, 'error');
     }

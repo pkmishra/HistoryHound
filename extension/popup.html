@@ -4,70 +4,828 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HistoryHounder</title>
-    <link rel="stylesheet" href="popup.css">
+    <style>
+        /* Professional styling with working structure */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 14px;
+            width: 450px;
+            height: 600px;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .app-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+            font-weight: 400;
+            margin: 0;
+        }
+
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .settings-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tab-navigation {
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab-list {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: #fff;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            background: #f8fafc;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0 16px;
+            transition: all 0.2s ease;
+        }
+
+        .search-input-wrapper:focus-within {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #1e293b;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .search-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .filters-panel {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-select,
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+
+        .filter-select:focus,
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .item-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.4;
+            margin: 0;
+            flex: 1;
+        }
+
+        .item-domain {
+            font-size: 11px;
+            color: #667eea;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+
+        .item-url {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .item-visits {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .recent-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a67d8;
+            transform: rotate(180deg);
+        }
+
+        .ai-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100%;
+        }
+
+        .ai-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .ai-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 4px 0;
+        }
+
+        .ai-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100%;
+        }
+
+        .chat-history {
+            flex: 1;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-y: auto;
+            min-height: 200px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .chat-message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .chat-message.assistant {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0 16px;
+            transition: all 0.2s ease;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #1e293b;
+            outline: none;
+        }
+
+        .chat-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .chat-send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .chat-send-btn:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .top-domains {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .top-domains h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 16px 0;
+        }
+
+        .domains-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .domain-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .domain-name {
+            font-size: 13px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .domain-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #ef4444;
+        }
+
+        .error-text {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .sources-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sources-section strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .sources-section ul {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .sources-section li {
+            margin-bottom: 4px;
+        }
+
+        .sources-section a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .sources-section a:hover {
+            text-decoration: underline;
+            color: white;
+        }
+
+        .chat-message.assistant .sources-section {
+            border-top-color: #e2e8f0;
+        }
+
+        .chat-message.assistant .sources-section strong {
+            color: #475569;
+        }
+
+        .chat-message.assistant .sources-section a {
+            color: #667eea;
+        }
+
+        .chat-message.assistant .sources-section a:hover {
+            color: #5a67d8;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">HistoryHounder</h1>
-            <p class="subtitle">Chat with your browser history</p>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">🔍</div>
+                    <div class="logo-text">
+                        <h1 class="app-title">HistoryHounder</h1>
+                        <p class="app-subtitle">Smart History Search</p>
+                    </div>
+                </div>
+                <button id="settingsBtn" class="settings-btn" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                    </svg>
+                </button>
+            </div>
         </header>
 
-        <div class="main-content">
-            <div class="search-section">
-                <div class="input-group">
-                    <input type="text" id="searchInput" placeholder="Ask about your browsing history..." class="search-input">
-                    <button id="searchBtn" class="search-btn">Search</button>
-                </div>
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <div class="tab-list">
+                <button class="tab-btn active" data-tab="search">Search</button>
+                <button class="tab-btn" data-tab="recent">Recent</button>
+                <button class="tab-btn" data-tab="ai">AI Chat</button>
+                <button class="tab-btn" data-tab="stats">Stats</button>
             </div>
+        </nav>
 
-            <div class="filters-section">
-                <div class="filter-group">
-                    <label for="daysFilter">Days back:</label>
-                    <select id="daysFilter" class="filter-select">
-                        <option value="">All time</option>
-                        <option value="1">Last 24 hours</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="ignoreDomains">Ignore domains:</label>
-                    <input type="text" id="ignoreDomains" placeholder="google.com, facebook.com" class="filter-input">
-                </div>
-            </div>
-
-            <div class="results-section">
-                <div id="loading" class="loading hidden">
-                    <div class="spinner"></div>
-                    <p>Searching your history...</p>
-                </div>
-                
-                <div id="results" class="results hidden">
-                    <h3>Search Results</h3>
-                    <div id="resultsList" class="results-list"></div>
-                </div>
-
-                <div id="qa-section" class="qa-section hidden">
-                    <h3>AI Q&A</h3>
-                    <div id="qaInput" class="qa-input-group">
-                        <input type="text" id="questionInput" placeholder="Ask a question about your history..." class="question-input">
-                        <button id="askBtn" class="ask-btn">Ask</button>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Search Tab -->
+            <div class="tab-content active" id="search-tab">
+                <div class="search-container">
+                    <div class="search-box">
+                        <div class="search-input-wrapper">
+                            <input type="text" id="searchInput" placeholder="Search your browsing history..." class="search-input">
+                            <button id="searchBtn" class="search-btn">Search</button>
+                        </div>
                     </div>
-                    <div id="qaResult" class="qa-result"></div>
-                </div>
 
-                <div id="error" class="error hidden">
-                    <p id="errorMessage"></p>
+                    <div class="filters-panel">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="daysFilter" class="filter-label">Time Range</label>
+                                <select id="daysFilter" class="filter-select">
+                                    <option value="">All time</option>
+                                    <option value="1">Last 24 hours</option>
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30">Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="ignoreDomains" class="filter-label">Exclude Domains</label>
+                                <input type="text" id="ignoreDomains" placeholder="google.com, facebook.com" class="filter-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="results-container">
+                        <div id="resultsList" class="results-list"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <footer class="footer">
-            <button id="settingsBtn" class="settings-btn">Settings</button>
-            <button id="helpBtn" class="help-btn">Help</button>
-        </footer>
+            <!-- Recent Tab -->
+            <div class="tab-content" id="recent-tab">
+                <div class="recent-container">
+                    <div class="section-header">
+                        <h3>Recent Activity</h3>
+                        <button id="refreshRecent" class="refresh-btn">↻</button>
+                    </div>
+                    <div id="recentList" class="recent-list"></div>
+                </div>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div class="tab-content" id="ai-tab">
+                <div class="ai-container">
+                    <div class="ai-header">
+                        <h3>AI Assistant</h3>
+                        <p class="ai-subtitle">Ask questions about your browsing history</p>
+                    </div>
+                    
+                    <div class="chat-container">
+                        <div id="chatHistory" class="chat-history">
+                            <div class="empty-state">
+                                <p>Start a conversation about your browsing history...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="questionInput" placeholder="Ask about your browsing patterns..." class="chat-input">
+                            <button id="askBtn" class="chat-send-btn">→</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="tab-content" id="stats-tab">
+                <div class="stats-container">
+                    <div class="section-header">
+                        <h3>Browsing Statistics</h3>
+                        <button id="refreshStats" class="refresh-btn">↻</button>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-number" id="totalVisits">-</div>
+                            <div class="stat-label">Total Visits</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🌐</div>
+                            <div class="stat-number" id="uniqueDomains">-</div>
+                            <div class="stat-label">Unique Domains</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-number" id="todayVisits">-</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-number" id="weekVisits">-</div>
+                            <div class="stat-label">This Week</div>
+                        </div>
+                    </div>
+                    
+                    <div class="top-domains">
+                        <h4>Most Visited Domains</h4>
+                        <div id="topDomainsList" class="domains-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script src="popup.js"></script>

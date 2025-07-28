@@ -3,7 +3,7 @@ import tempfile
 import os
 from unittest.mock import patch, MagicMock
 from historyhounder.content_fetcher import validate_url, fetch_youtube_metadata, fetch_article_content
-from historyhounder.cli import validate_file_path
+from historyhounder.utils import validate_file_path
 from historyhounder.history_extractor import secure_temp_db_copy
 
 

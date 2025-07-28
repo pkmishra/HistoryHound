@@ -1,5 +1,5 @@
 import pytest
-from historyhounder.cli import should_ignore, parse_comma_separated_values
+from historyhounder.utils import should_ignore, parse_comma_separated_values
 import argparse
 from unittest.mock import Mock
 
@@ -43,7 +43,7 @@ def test_ignore_empty():
 
 def test_cli_argument_parsing():
     """Test that CLI arguments are correctly parsed for comma-separated values."""
-    from historyhounder.cli import parse_comma_separated_values
+    from historyhounder.utils import parse_comma_separated_values
     
     # Simulate CLI argument parsing
     mock_args = Mock()

@@ -1,7 +1,7 @@
 # HistoryHounder
 
 A local, privacy-first tool for natural language querying and chatting with your browser history. Extract, analyze, and search through your browsing history using AI-powered semantic search and Q&A.
-
+https://www.linkedin.com/posts/dharmesh_the-thing-i-want-that-may-already-exist-activity-7353505345610104833-nBYX?utm_source=share&utm_medium=member_desktop&rcm=ACoAAABdAAIBz1BuO3lnBN5wkhHsaZ32J01V6tQ
 ## Features
 
 - **Cross-platform browser support**: Chrome, Brave, Edge, Firefox, Safari (Windows, macOS, Linux)
@@ -95,7 +95,7 @@ User Query → Search/LLM → Vector Store → Results/Answers
 
 #### **ChromaDB (Vector Database)**
 - **Rationale**: Local-first, Python-native, excellent for embeddings and metadata
-- **Benefits**: 
+- **Benefits**:
   - No external dependencies (runs locally)
   - Excellent metadata support
   - Persistent client for test isolation
@@ -103,7 +103,7 @@ User Query → Search/LLM → Vector Store → Results/Answers
 
 #### **Sentence Transformers (Embeddings)**
 - **Rationale**: High-quality, fast, local embedding models
-- **Benefits**: 
+- **Benefits**:
   - No API calls required
   - Excellent semantic search performance
   - Multiple model options (all-MiniLM-L6-v2, etc.)
@@ -463,7 +463,7 @@ See `SECURITY.md` for detailed security guidelines and best practices.
 ---
 
 ## License
-MIT (or your chosen license) 
+MIT (or your chosen license)
 
 ---
 
@@ -484,4 +484,4 @@ collection = client.get_or_create_collection("history")
 - This is now the default in `historyhounder/vector_store.py` and is required for all integration tests to pass.
 - For more details, see [ChromaDB Issue: An instance of Chroma already exists for ... with different settings](https://blog.csdn.net/DLW__/article/details/145953793)
 
---- 
+---

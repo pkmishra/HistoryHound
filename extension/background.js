@@ -32,6 +32,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
       
+    case 'getFreshHistoryData':
+      getFreshHistoryData(request.filters)
+        .then(results => sendResponse({ success: true, results }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+      
     case 'askQuestion':
       askQuestion(request.question, request.history)
         .then(answer => sendResponse({ success: true, answer }))
@@ -176,33 +182,47 @@ async function getHistoryStats(filters = {}) {
       });
     }
     
-    const stats = {
-      total: filteredHistory.length,
-      domains: {},
-      recent: filteredHistory.slice(0, 10),
-      timeRanges: {
-        today: 0,
-        week: 0,
-        month: 0
-      }
-    };
-    
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
     const weekMs = 7 * dayMs;
     const monthMs = 30 * dayMs;
     
+    // Calculate statistics
+    let totalVisits = 0;
+    let todayVisits = 0;
+    let weekVisits = 0;
+    const domainCounts = {};
+    
     filteredHistory.forEach(item => {
+      totalVisits += item.visitCount || 1;
+      
       // Count by domain
       const domain = new URL(item.url).hostname;
-      stats.domains[domain] = (stats.domains[domain] || 0) + 1;
+      domainCounts[domain] = (domainCounts[domain] || 0) + (item.visitCount || 1);
       
       // Count by time range
       const visitTime = item.lastVisitTime;
-      if (now - visitTime < dayMs) stats.timeRanges.today++;
-      if (now - visitTime < weekMs) stats.timeRanges.week++;
-      if (now - visitTime < monthMs) stats.timeRanges.month++;
+      if (now - visitTime < dayMs) todayVisits += (item.visitCount || 1);
+      if (now - visitTime < weekMs) weekVisits += (item.visitCount || 1);
     });
+    
+    // Get unique domains count
+    const uniqueDomains = Object.keys(domainCounts).length;
+    
+    // Get top domains
+    const topDomains = Object.entries(domainCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10)
+      .map(([domain, count]) => ({ domain, count }));
+    
+    const stats = {
+      totalVisits,
+      uniqueDomains,
+      todayVisits,
+      weekVisits,
+      recent: filteredHistory.slice(0, 10),
+      topDomains
+    };
     
     return stats;
   } catch (error) {
@@ -220,6 +240,18 @@ async function getHistoryData(filters = {}) {
   if (historyCache.has(cacheKey) && (now - lastCacheTime) < CACHE_DURATION) {
     return historyCache.get(cacheKey);
   }
+  
+  return await fetchHistoryData(filters, true);
+}
+
+// Get fresh history data without caching
+async function getFreshHistoryData(filters = {}) {
+  return await fetchHistoryData(filters, false);
+}
+
+// Fetch history data from Chrome API
+async function fetchHistoryData(filters = {}, shouldCache = true) {
+  const now = Date.now();
   
   // Build search query - Chrome history API requires 'text' property
   const searchQuery = {
@@ -249,9 +281,12 @@ async function getHistoryData(filters = {}) {
     });
   }
   
-  // Cache the results
-  historyCache.set(cacheKey, filteredHistory);
-  lastCacheTime = now;
+  // Cache the results if requested
+  if (shouldCache) {
+    const cacheKey = JSON.stringify(filters);
+    historyCache.set(cacheKey, filteredHistory);
+    lastCacheTime = now;
+  }
   
   return filteredHistory;
 }

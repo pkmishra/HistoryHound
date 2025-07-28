@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryHounder Sync Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>HistoryHounder Sync Fix Test</h1>
+    <p>This page tests the sync history functionality to ensure it fetches the latest history data.</p>
+    
+    <div class="test-section">
+        <h2>Test 1: Check Cache Status</h2>
+        <p>This test checks if the cache clearing functionality works.</p>
+        <button class="test-button" onclick="testCacheClear()">Test Cache Clear</button>
+        <div id="cacheResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Test Fresh History Fetch</h2>
+        <p>This test simulates the sync process using the new getFreshHistoryData action.</p>
+        <button class="test-button" onclick="testFreshHistoryFetch()">Test Fresh History Fetch</button>
+        <div id="freshHistoryResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Simulate Full Sync Process</h2>
+        <p>This test simulates the complete sync process including cache clearing and fresh data fetch.</p>
+        <button class="test-button" onclick="testFullSyncProcess()">Test Full Sync Process</button>
+        <div id="fullSyncResult" class="result"></div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function testCacheClear() {
+            showResult('cacheResult', 'Testing cache clear functionality...', 'info');
+            
+            try {
+                // Test if the extension is available
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+                
+                // Test cache clear action
+                const response = await chrome.runtime.sendMessage({
+                    action: 'clearCache'
+                });
+                
+                if (response && response.success) {
+                    showResult('cacheResult', '✅ Cache clear functionality working!\n\nResponse: ' + JSON.stringify(response, null, 2), 'success');
+                } else {
+                    showResult('cacheResult', '❌ Cache clear failed: ' + (response?.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showResult('cacheResult', '❌ Cache clear test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testFreshHistoryFetch() {
+            showResult('freshHistoryResult', 'Testing fresh history fetch...', 'info');
+            
+            try {
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+                
+                // Test fresh history fetch action
+                const response = await chrome.runtime.sendMessage({
+                    action: 'getFreshHistoryData',
+                    filters: {}
+                });
+                
+                if (response && response.success) {
+                    const historyCount = response.results ? response.results.length : 0;
+                    showResult('freshHistoryResult', 
+                        `✅ Fresh history fetch working!\n\n` +
+                        `Fetched ${historyCount} history items\n\n` +
+                        `Sample items:\n` +
+                        JSON.stringify(response.results?.slice(0, 3), null, 2), 'success');
+                } else {
+                    showResult('freshHistoryResult', '❌ Fresh history fetch failed: ' + (response?.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showResult('freshHistoryResult', '❌ Fresh history fetch test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testFullSyncProcess() {
+            showResult('fullSyncResult', 'Testing full sync process...', 'info');
+            
+            try {
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+                
+                // Step 1: Clear cache
+                showResult('fullSyncResult', 'Step 1: Clearing cache...', 'info');
+                const clearResponse = await chrome.runtime.sendMessage({
+                    action: 'clearCache'
+                });
+                
+                if (!clearResponse || !clearResponse.success) {
+                    throw new Error('Cache clear failed: ' + (clearResponse?.error || 'Unknown error'));
+                }
+                
+                // Step 2: Fetch fresh history
+                showResult('fullSyncResult', 'Step 1: ✅ Cache cleared\nStep 2: Fetching fresh history...', 'info');
+                const historyResponse = await chrome.runtime.sendMessage({
+                    action: 'getFreshHistoryData',
+                    filters: {}
+                });
+                
+                if (!historyResponse || !historyResponse.success) {
+                    throw new Error('Fresh history fetch failed: ' + (historyResponse?.error || 'Unknown error'));
+                }
+                
+                const historyCount = historyResponse.results ? historyResponse.results.length : 0;
+                
+                showResult('fullSyncResult', 
+                    `✅ Full sync process working!\n\n` +
+                    `Step 1: ✅ Cache cleared\n` +
+                    `Step 2: ✅ Fresh history fetched\n\n` +
+                    `Total history items: ${historyCount}\n\n` +
+                    `This confirms the sync button will now fetch the latest history data.`, 'success');
+                
+            } catch (error) {
+                showResult('fullSyncResult', '❌ Full sync process test failed: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 
