@@ -124,4 +124,9 @@ dmypy.json
 cython_debug/
 
 # Conversation log (kept locally for audit trail)
-Full_Conversation_Log.md 
+Full_Conversation_Log.md
+
+# Development logs (preserved locally, never deleted)
+# ⚠️  CRITICAL: These files contain audit trails and should NEVER be deleted
+# 📝  Purpose: Document key learnings and development decisions
+DEVELOPMENT_LOG_*.md 
