@@ -5,13 +5,22 @@ description = "Chat with your browser history."
 authors = [
     { name = "Your Name", email = "your@email.com" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
     "pydantic>=2.10.6",
     "uvicorn[standard]>=0.33.0",
+    "mock",
+    "pytest",
+    "requests",
+    "readability-lxml", 
+    "beautifulsoup4",
+    "sentence-transformers",
+    "chromadb",
+    "yt-dlp",
+    "instructor",
 ]
 
 [tool.uv]
-requirements = "requirements.txt" 
+# Requirements are managed through dependencies above 

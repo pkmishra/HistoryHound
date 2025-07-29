@@ -1,98 +1,80 @@
 # HistoryHounder
 
-A local, privacy-first tool for natural language querying and chatting with your browser history. Extract, analyze, and search through your browsing history using AI-powered semantic search and Q&A.
-# Why?
-https://www.linkedin.com/posts/dharmesh_the-thing-i-want-that-may-already-exist-activity-7353505345610104833-nBYX?utm_source=share&utm_medium=member_desktop&rcm=ACoAAABdAAIBz1BuO3lnBN5wkhHsaZ32J01V6tQ
+Chat with your browser history using AI.
+
+## Python Version Management
+
+This project uses **Python 3.12** and **uv** for dependency management. Follow these steps:
+
+### Initial Setup
+
+1. **Install Python 3.12 with uv**:
+   ```bash
+   uv python install 3.12
+   ```
+
+2. **Pin the project to Python 3.12**:
+   ```bash
+   uv python pin 3.12
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   uv sync
+   ```
+
+### Running the Project
+
+Always use `uv run` for all Python operations:
+
+```bash
+# Run tests
+uv run pytest
+
+# Start the server
+uv run python -m historyhounder.server
+
+# Run any Python script
+uv run python your_script.py
+```
+
 ## Features
 
-- **Cross-platform browser support**: Chrome, Brave, Edge, Firefox, Safari (Windows, macOS, Linux)
-- **Content extraction**: Fetch and extract content from articles and videos (YouTube via yt-dlp)
-- **Semantic search**: Find relevant history entries using embeddings
-- **LLM Q&A**: Ask questions about your browsing history using local LLMs (Ollama)
-  - **Statistical Questions**: "What is the most visited website?" with accurate visit count analysis
-  - **Domain-Specific Questions**: "How many times did I visit GitHub?" with visit count aggregation
-  - **Semantic Questions**: "What AI-related websites did I visit?" with content-based search
-- **Browser Extension**: Full-featured extension with popup and sidepanel interfaces
-  - **Popup Interface**: Quick access to search and Q&A functionality
-  - **Sidepanel Interface**: Persistent workspace with advanced features and chat history
-  - **Real-time Sync**: Seamless integration with backend for AI-powered features
-- **Privacy-first**: All processing happens locally, no data sent to external services
-- **Filtering**: Ignore specific domains or URL patterns
-- **URL limiting**: Limit the number of URLs processed for faster processing
-- **Security hardened**: Input validation, path sanitization, subprocess security
-- **Comprehensive test coverage**: Unit, integration, security, and edge case tests
-- **Robust end-to-end integration tests**: Using real-world URLs and scenarios
-- **Advanced Q&A Testing**: Comprehensive integration tests for all question types
-
----
+- **Advanced Q&A System**: Uses state-of-the-art LLM technology with prompt engineering for different question types (statistical, temporal, semantic, comparative, factual)
+- **Intelligent Context Optimization**: Dynamically adjusts context size and filtering based on question type
+- **Source Relevance Filtering**: Post-processes results to ensure only highly relevant sources are displayed
+- **Model Caching**: Optimized to prevent redundant model downloads and loading
+- **Web Interface**: Easy-to-use browser extension for querying your history
+- **REST API**: FastAPI backend following OpenAPI specification
+- **Comprehensive Testing**: Full test suite with integration tests (no mocking approach)
 
 ## Architecture
 
 ### Core Components
 
-HistoryHounder follows a modular, loosely-coupled architecture with clear separation of concerns:
-
-#### 1. **History Extraction Layer**
-- **`history_extractor.py`**: Browser-agnostic history extraction with support for Chrome, Brave, Edge, Firefox, and Safari
-- **`extract_chrome_history.py`**: Browser detection and path management
-- **Secure temporary file handling**: Uses context managers for safe database copying and cleanup
-
-#### 2. **Content Processing Layer**
-- **`content_fetcher.py`**: Hybrid content extraction using readability-lxml for articles and yt-dlp for videos
-- **URL validation**: Comprehensive security validation to prevent command injection
-- **Fallback mechanisms**: Multiple extraction strategies for robust content handling
-
-#### 3. **Vector Storage Layer**
-- **`vector_store.py`**: ChromaDB integration with persistent client for test isolation
-- **Metadata conversion**: Safe handling of complex data types (datetime, None, lists, dicts)
-- **Collection management**: Proper cleanup and resource management
-
-#### 4. **Embedding Layer**
-- **`embedder/`**: Pluggable embedding backends (sentence-transformers, etc.)
-- **Registry pattern**: Easy addition of new embedding models
-- **Batch processing**: Efficient handling of large document sets
-
-#### 5. **LLM Integration Layer**
-- **`llm/ollama_qa.py`**: LangChain integration with Ollama for local Q&A
-- **Retrieval-Augmented Generation (RAG)**: Context-aware question answering
-- **Prompt engineering**: Optimized prompts for browser history context
-- **Question Classification**: Intelligent routing based on question type (statistical, domain-specific, semantic)
-- **Visit Count Aggregation**: Accurate summation of visit counts for domain-specific queries
-
-#### 6. **Pipeline Orchestration**
-- **`pipeline.py`**: Main orchestration logic coordinating all components
-- **Filtering**: Domain and pattern-based URL filtering
-- **Progress tracking**: User feedback during long-running operations
-
-#### 7. **CLI Interface**
-- **`cli.py`**: Thin CLI layer with argument parsing and user interaction
-- **No business logic**: All core functionality delegated to modules
-- **Error handling**: User-friendly error messages and validation
-
-#### 8. **Backend Server**
-- **`server.py`**: FastAPI server for browser extension integration
-- **OpenAPI Specification**: Automatic API documentation with Swagger UI and ReDoc
-- **Pydantic Models**: Type-safe request/response validation
-- **CORS Support**: Full cross-origin support for browser extensions
-- **RESTful API**: Clean endpoints for search, Q&A, and history processing
-- **Error Handling**: Proper HTTP status codes and JSON responses
-- **Async Support**: High-performance async/await patterns
+1. **History Extraction** (`extract_chrome_history.py`): Extracts browsing history from Chrome
+2. **Content Fetching** (`content_fetcher.py`): Retrieves and processes web page content
+3. **Vector Store** (`vector_store.py`): ChromaDB-based storage for embeddings
+4. **Search Engine** (`search.py`): Advanced Q&A with context optimization and source filtering
+5. **LLM Integration** (`llm/ollama_qa.py`): Ollama-based question answering with structured output
+6. **Web Server** (`server.py`): FastAPI backend
+7. **Browser Extension** (`extension/`): Chrome extension for user interface
 
 ### Data Flow
 
-```
-Browser History DB → History Extractor → Content Fetcher → Embedder → Vector Store
-                                                              ↓
-User Query → Search/LLM → Vector Store → Results/Answers
-```
+1. Browser history → Content fetching → Text processing
+2. Text → Embeddings → Vector storage (ChromaDB)  
+3. User query → Context optimization → LLM processing → Structured response
+4. Response → Source filtering → User interface
 
-### Security Architecture
+## Development Philosophy
 
-- **Input Validation**: All user inputs (URLs, file paths, CLI args) are validated
-- **Path Sanitization**: File operations restricted to safe directories
-- **Subprocess Security**: URL validation prevents command injection
-- **Error Sanitization**: Sensitive information removed from error messages
-- **Temporary File Security**: Secure creation, permissions, and cleanup
+This project follows a **comprehensive testing and integration** approach:
+
+- **Integration Tests**: Tests run without mocking when possible for real-world validation
+- **Quality Assurance**: All tests must pass (123/123) before committing
+- **Performance Focus**: Model caching, context optimization, and efficient vector operations
+- **Security First**: Input validation, path sanitization, and comprehensive error handling
 
 ---
 
@@ -292,21 +274,9 @@ uv run python -m historyhounder.cli search --query "Shopify AI tools" --top-k 5
 ```
 
 ### **LLM Q&A with Ollama**
-Ask questions about your browsing history using a local LLM:
-
-**Statistical Questions** (visit count analysis):
+Ask a question and get an answer from your history using a local LLM:
 ```sh
-uv run python -m historyhounder.cli search --query "What is the most visited website?" --llm ollama --llm-model llama3.2
-```
-
-**Domain-Specific Questions** (visit count aggregation):
-```sh
-uv run python -m historyhounder.cli search --query "How many times did I visit GitHub?" --llm ollama --llm-model llama3.2
-```
-
-**Semantic Questions** (content-based search):
-```sh
-uv run python -m historyhounder.cli search --query "What AI-related websites did I visit?" --llm ollama --llm-model llama3.2
+uv run python -m historyhounder.cli search --query "What was that article I read last week about Shopify and AI tools?" --llm ollama --llm-model llama3
 ```
 
 - You can change `--llm-model` to any model available in your Ollama installation (e.g., `mistral`, `llama2`, etc.)
@@ -383,12 +353,6 @@ The backend server enables the HistoryHounder browser extension to:
 - Process and sync history data
 - Access enhanced features through the extension UI
 
-**Extension Features**:
-- **Popup Interface**: Quick access to search and Q&A functionality
-- **Sidepanel Interface**: Persistent workspace with advanced features, chat history, and statistics
-- **Real-time Sync**: Seamless integration with backend for AI-powered features
-- **Quick Actions**: Pre-defined searches and questions for common use cases
-
 - The browser extension now ensures that only the required fields (`id`, `url`, `title`, `lastVisitTime`, `visitCount`) are sent to the backend when syncing history. This prevents 422 Unprocessable Entity errors from the FastAPI backend.
 
 ### Troubleshooting
@@ -421,22 +385,11 @@ The test suite provides comprehensive coverage including:
 - **CLI Tests**: Argument parsing, error messages, malformed input
 - **Error Handling Tests**: Database failures, network timeouts, corrupted data
 - **Real-world Scenarios**: Using actual public URLs and content
-- **Q&A Integration Tests**: Comprehensive testing of all question types:
-  - Statistical questions (most visited, visit counts)
-  - Domain-specific questions (visit count aggregation)
-  - Semantic questions (content-based search)
-  - Mixed question types and edge cases
 
 ### Integration (End-to-End) Tests
 - The test suite includes robust integration tests that simulate the full pipeline: extracting sample browser history, fetching content, embedding, storing in ChromaDB, and performing semantic search.
 - Integration tests use pytest fixtures to ensure each test uses a unique ChromaDB collection, providing full isolation and preventing cross-test contamination.
 - **Tests now use real datetime objects and edge-case metadata** to ensure all metadata is properly converted and stored in ChromaDB. This catches issues with datetime, None, lists, dicts, and other non-primitive types.
-- **Q&A Integration Tests**: Comprehensive testing of the complete Q&A pipeline with realistic data:
-  - Statistical question accuracy (most visited website detection)
-  - Domain-specific visit count aggregation (GitHub, LinkedIn, etc.)
-  - Semantic search with content-based retrieval
-  - Error handling for empty vector stores and invalid inputs
-  - Response structure validation and parameter validation
 
 ### CLI Design Best Practices
 
@@ -503,7 +456,7 @@ See `SECURITY.md` for detailed security guidelines and best practices.
 ---
 
 ## License
-MIT 
+MIT (or your chosen license)
 
 ---
 
