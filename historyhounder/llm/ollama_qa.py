@@ -284,7 +284,7 @@ def answer_question_ollama(query, retriever, model="llama3.2:latest"):
     
     # Enhanced prompt template with temporal support
     prompt = PromptTemplate(
-        input_variables=["context", "question", "original_question"],
+        input_variables=["context", "question"],
         template="""
 You are an expert browser history analyst with access to detailed browsing data. You can analyze visit patterns, content, and provide insights about browsing behavior.
 
@@ -301,8 +301,7 @@ ANALYSIS INSTRUCTIONS:
 - Provide structured, clear answers with supporting data
 - If a time period is specified, clearly state the time range in your answer
 
-Original Question: {original_question}
-Filtered Question: {question}
+Question: {question}
 
 Provide a comprehensive answer with:
 1. Direct answer to the question with specific data
@@ -325,5 +324,14 @@ Answer:
     result = qa.invoke({"query": query})
     return {
         "answer": result["result"],
-        "sources": [doc.page_content for doc in result["source_documents"]],
+        "sources": [
+            {
+                "content": doc.page_content,
+                "url": doc.metadata.get("url", ""),
+                "title": doc.metadata.get("title", ""),
+                "visit_time": doc.metadata.get("visit_time", ""),
+                "domain": doc.metadata.get("domain", "")
+            }
+            for doc in result["source_documents"]
+        ],
     } 

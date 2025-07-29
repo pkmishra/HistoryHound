@@ -317,8 +317,8 @@ async def ask_question(request: QaRequest):
                 detail="HistoryHounder backend not available"
             )
         
-        # Perform Q&A search with configurable model
-        result = llm_qa_search(request.question, top_k=request.top_k, llm_model=OLLAMA_MODEL)
+        # Perform Q&A search
+        result = llm_qa_search(request.question, top_k=request.top_k)
         
         # Format sources for the response
         sources = []
@@ -397,6 +397,7 @@ async def process_history(request: ProcessHistoryRequest):
             import tempfile
             import sqlite3
             from datetime import datetime
+            import asyncio
             
             # Create a persistent SQLite database from the extension data
             import os
@@ -532,17 +533,36 @@ async def process_history(request: ProcessHistoryRequest):
             conn.close()
             
             # Extract and process history using the temporary database (only current request URLs)
+            # Use a timeout to prevent hanging
             logger.info(f"Calling pipeline with temp_db_path={temp_db_path}, with_content=True, embed=True")
-            result = extract_and_process_history(
-                browser='chrome',  # Assume Chrome format
-                db_path=temp_db_path,
-                with_content=True,
-                embed=True,
-                embedder_backend='sentence-transformers',
-                persist_directory=VECTOR_STORE_DIR,
-                existing_urls=existing_urls  # Pass existing URLs to avoid reprocessing
-            )
-            logger.info(f"Pipeline returned status: {result.get('status')}, results count: {len(result.get('results', []))}")
+            
+            # Run the pipeline in a thread to avoid blocking
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    extract_and_process_history,
+                    browser='chrome',  # Assume Chrome format
+                    db_path=temp_db_path,
+                    with_content=True,
+                    embed=True,
+                    embedder_backend='sentence-transformers',
+                    persist_directory=VECTOR_STORE_DIR,
+                    existing_urls=existing_urls  # Pass existing URLs to avoid reprocessing
+                )
+                
+                try:
+                    result = future.result(timeout=30)  # 30 second timeout
+                    logger.info(f"Pipeline returned status: {result.get('status')}, results count: {len(result.get('results', []))}")
+                except concurrent.futures.TimeoutError:
+                    # Clean up temporary database
+                    try:
+                        os.remove(temp_db_path)
+                    except:
+                        pass
+                    raise HTTPException(
+                        status_code=408,
+                        detail="History processing timed out. Please try with fewer items or try again later."
+                    )
             
             # Clean up temporary database
             try:

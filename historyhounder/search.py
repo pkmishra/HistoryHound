@@ -82,14 +82,19 @@ def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', pers
             # If semantic search fails, continue with all documents
             pass
     
-    # Create a simple retriever for the QA chain
-    class SimpleRetriever:
-        def __init__(self, documents, metadatas):
-            self.documents = documents
-            self.metadatas = metadatas
+    # Create a proper retriever for the QA chain
+    from langchain_core.retrievers import BaseRetriever
+    from langchain_core.documents import Document
+    from typing import List
+    
+    class SimpleRetriever(BaseRetriever):
+        documents: List[str]
+        metadatas: List[dict]
         
-        def get_relevant_documents(self, query):
-            from langchain_core.documents import Document
+        def __init__(self, documents: List[str], metadatas: List[dict]):
+            super().__init__(documents=documents, metadatas=metadatas)
+        
+        def _get_relevant_documents(self, query: str) -> List[Document]:
             docs = []
             for doc, meta in zip(self.documents, self.metadatas):
                 # Create a document with metadata
@@ -99,6 +104,10 @@ def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', pers
                 )
                 docs.append(doc_obj)
             return docs
+        
+        async def _aget_relevant_documents(self, query: str) -> List[Document]:
+            # Async version - just call the sync version
+            return self._get_relevant_documents(query)
     
     retriever = SimpleRetriever(documents, metadatas)
     
