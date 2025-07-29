@@ -5,7 +5,7 @@ A powerful browser extension that allows you to search and chat with your browse
 ## Features
 
 - 🔍 **Semantic History Search**: Advanced search using HistoryHounder's semantic search capabilities
-- 🤖 **AI Q&A**: Ask questions about your browsing history using Ollama LLM
+- 🤖 **AI Q&A**: Ask questions about your browsing history using Ollama LLM with intelligent question-type classification and relevant source attribution
 - 📊 **History Analytics**: View statistics about your browsing patterns
 - 🎯 **Advanced Filtering**: Filter by time range and exclude specific domains
 - 🔗 **Quick Access**: Click on history items to revisit pages instantly
