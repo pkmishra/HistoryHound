@@ -83,7 +83,7 @@ Examples:
             handle_server(args)
         elif not DEPENDENCIES_AVAILABLE:
             print("❌ Other commands require additional dependencies")
-            print("Please install: pip install beautifulsoup4 langchain-chroma langchain-huggingface langchain-ollama")
+            print("Please install: pip install beautifulsoup4 sentence-transformers chromadb instructor")
             return
         elif args.command == 'extract':
             handle_extract(args)

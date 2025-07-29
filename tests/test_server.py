@@ -180,19 +180,19 @@ class TestBackendAPI(unittest.TestCase):
     def test_06_process_history_endpoint(self):
         """Test history processing endpoint"""
         try:
-            # Test with sample history data
+            # Test with sample history data (use reliable URLs that won't timeout)
             sample_history = [
                 {
                     'id': '1',
-                    'url': 'https://example.com',
-                    'title': 'Example Site',
+                    'url': 'https://httpbin.org/status/200',  # More reliable test URL
+                    'title': 'Test Site 1',
                     'lastVisitTime': int(time.time() * 1000000),
                     'visitCount': 1
                 },
                 {
                     'id': '2',
-                    'url': 'https://test.com',
-                    'title': 'Test Site',
+                    'url': 'https://httpbin.org/json',  # More reliable test URL
+                    'title': 'Test Site 2',
                     'lastVisitTime': int(time.time() * 1000000),
                     'visitCount': 1
                 }
@@ -204,7 +204,7 @@ class TestBackendAPI(unittest.TestCase):
                 f"{self.base_url}/api/process-history",
                 json=payload,
                 headers={'Content-Type': 'application/json'},
-                timeout=10
+                timeout=30  # Increased timeout from 10 to 30 seconds
             )
             
             # Should get 200, 503 (if backend not available), or 500 (if error)
