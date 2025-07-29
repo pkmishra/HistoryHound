@@ -27,6 +27,26 @@ class TestTimestampIntegration:
         from fastapi.testclient import TestClient
         return TestClient(app)
     
+    @pytest.fixture
+    def isolated_client(self, monkeypatch, tmp_path_factory):
+        """Create a test client with isolated database directories."""
+        # Create isolated test directories
+        temp_base = tmp_path_factory.mktemp("server_test")
+        test_history_dir = temp_base / "test_history_db"
+        test_chroma_dir = temp_base / "test_chroma_db"
+        
+        # Set environment variables
+        monkeypatch.setenv("HISTORYHOUNDER_HISTORY_DB_DIR", str(test_history_dir))
+        monkeypatch.setenv("HISTORYHOUNDER_VECTOR_STORE_DIR", str(test_chroma_dir))
+        
+        # Import and reload the server module to pick up the new environment variables
+        import importlib
+        from historyhounder import server
+        importlib.reload(server)
+        
+        from fastapi.testclient import TestClient
+        return TestClient(server.app)
+    
     @pytest.fixture(autouse=True)
     def cleanup_vector_store(self):
         """Clean up the vector store before and after each test."""
@@ -192,7 +212,7 @@ class TestTimestampIntegration:
                 assert year < 2030
     
     @patch('historyhounder.content_fetcher.fetch_and_extract')
-    def test_vector_store_metadata_structure(self, mock_fetch_content, temp_db_path):
+    def test_vector_store_metadata_structure(self, mock_fetch_content, temp_db_path, temp_vector_store_dir):
         """Test that vector store metadata is structured correctly."""
         # Mock content fetching to return valid content
         mock_fetch_content.return_value = {
@@ -230,14 +250,14 @@ class TestTimestampIntegration:
             with_content=True,  # Enable content fetching
             embed=True,
             embedder_backend='sentence-transformers',
-            persist_directory='test_chroma_db'
+            persist_directory=temp_vector_store_dir
         )
         
         assert result['status'] == 'embedded'
         assert len(result['results']) > 0
         
         # Check the vector store metadata
-        store = ChromaVectorStore(persist_directory='test_chroma_db')
+        store = ChromaVectorStore(persist_directory=temp_vector_store_dir)
         try:
             results = store.collection.get(include=['metadatas'])
             assert results['metadatas'] is not None
@@ -259,10 +279,7 @@ class TestTimestampIntegration:
                     assert dt.year > 2000
         finally:
             store.close()
-            # Clean up test database
-            import shutil
-            if os.path.exists('test_chroma_db'):
-                shutil.rmtree('test_chroma_db')
+            # Test database cleanup is handled by the temp_vector_store_dir fixture
     
     def test_incremental_processing(self, client, sample_history_data):
         """Test that incremental processing works correctly."""
@@ -323,7 +340,7 @@ class TestTimestampIntegration:
         ]) or third_data["processed_count"] == 0
     
     @patch('historyhounder.content_fetcher.fetch_and_extract')
-    def test_metadata_field_mapping(self, mock_fetch_content, temp_db_path):
+    def test_metadata_field_mapping(self, mock_fetch_content, temp_db_path, temp_vector_store_dir):
         """Test that metadata fields are properly mapped for search API."""
         # Mock content fetching
         mock_fetch_content.return_value = {
@@ -360,13 +377,13 @@ class TestTimestampIntegration:
             with_content=True,
             embed=True,
             embedder_backend='sentence-transformers',
-            persist_directory='test_metadata_db'
+            persist_directory=temp_vector_store_dir
         )
         
         assert result['status'] == 'embedded'
         
         # Check vector store metadata
-        store = ChromaVectorStore(persist_directory='test_metadata_db')
+        store = ChromaVectorStore(persist_directory=temp_vector_store_dir)
         try:
             results = store.collection.get(include=['metadatas'])
             
@@ -389,20 +406,26 @@ class TestTimestampIntegration:
             if os.path.exists('test_metadata_db'):
                 shutil.rmtree('test_metadata_db')
     
-    def test_sqlite_database_creation(self, client, sample_history_data):
+    def test_sqlite_database_creation(self, isolated_client, sample_history_data):
         """Test that SQLite databases are created correctly with proper schema."""
-        # Process history data
-        response = client.post(
+        import os
+        
+        # Process history data using isolated client
+        response = isolated_client.post(
             "/api/process-history",
             json={"history": sample_history_data}
         )
         assert response.status_code == 200
         
-        # Check that the history_db directory exists and contains SQLite files
-        assert os.path.exists('history_db')
+        # Get the isolated server's history directory
+        from historyhounder.server import HISTORY_DB_DIR
+        test_history_dir = HISTORY_DB_DIR
+        
+        # Check that the isolated test history_db directory exists and contains SQLite files
+        assert os.path.exists(test_history_dir)
         
         # Check for the main extension history database
-        extension_db_path = 'history_db/extension_history.sqlite'
+        extension_db_path = os.path.join(test_history_dir, 'extension_history.sqlite')
         if os.path.exists(extension_db_path):
             # Verify the database structure
             conn = sqlite3.connect(extension_db_path)
@@ -423,6 +446,7 @@ class TestTimestampIntegration:
                 assert expected_col in column_names
             
             conn.close()
+        # Note: tmp_path_factory automatically cleans up isolated directories
     
     def test_error_handling_invalid_timestamps(self, client):
         """Test handling of invalid or malformed timestamps."""

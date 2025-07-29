@@ -38,6 +38,8 @@ logger = logging.getLogger(__name__)
 OLLAMA_MODEL = os.getenv("HISTORYHOUNDER_OLLAMA_MODEL", "llama3.2:latest")
 # Allow tests to override the vector store directory
 VECTOR_STORE_DIR = os.getenv("HISTORYHOUNDER_VECTOR_STORE_DIR", "chroma_db")
+# Allow tests to override the history database directory
+HISTORY_DB_DIR = os.getenv("HISTORYHOUNDER_HISTORY_DB_DIR", "history_db")
 
 # Pydantic Models for API
 class HealthResponse(BaseModel):
@@ -317,8 +319,8 @@ async def ask_question(request: QaRequest):
                 detail="HistoryHounder backend not available"
             )
         
-        # Perform Q&A search with configurable model
-        result = llm_qa_search(request.question, top_k=request.top_k, llm_model=OLLAMA_MODEL)
+        # Perform Q&A search
+        result = llm_qa_search(request.question, top_k=request.top_k)
         
         # Format sources for the response
         sources = []
@@ -400,7 +402,7 @@ async def process_history(request: ProcessHistoryRequest):
             
             # Create a persistent SQLite database from the extension data
             import os
-            db_dir = 'history_db'
+            db_dir = HISTORY_DB_DIR
             os.makedirs(db_dir, exist_ok=True)
             db_path = os.path.join(db_dir, 'extension_history.sqlite')
             
@@ -592,7 +594,7 @@ async def process_history(request: ProcessHistoryRequest):
                 import os
                 
                 # Create a persistent SQLite database from the extension data
-                db_dir = 'history_db'
+                db_dir = HISTORY_DB_DIR
                 os.makedirs(db_dir, exist_ok=True)
                 db_path = os.path.join(db_dir, 'extension_history.sqlite')
                 

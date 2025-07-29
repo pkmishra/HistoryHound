@@ -65,7 +65,12 @@ class SentenceTransformersEmbedder(Embedder):
         self.model_name = model_name
     
     def embed(self, texts: List[str]) -> List[List[float]]:
-        return self.model.encode(texts, convert_to_numpy=True).tolist()
+        embeddings = self.model.encode(texts, convert_to_numpy=True)
+        # Ensure we return a list of lists, not numpy arrays
+        if hasattr(embeddings, 'tolist'):
+            return embeddings.tolist()
+        else:
+            return [list(emb) for emb in embeddings]
 
 def get_embedder(name='sentence-transformers', **kwargs):
     """
