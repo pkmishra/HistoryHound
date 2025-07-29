@@ -285,33 +285,50 @@ def answer_question_ollama(query, retriever, model="llama3.2:latest"):
     # Enhanced prompt template with temporal support
     prompt = PromptTemplate(
         input_variables=["context", "question"],
-        template="""
-You are an expert browser history analyst with access to detailed browsing data. You can analyze visit patterns, content, and provide insights about browsing behavior.
+        template="""You are a precise browser history analyst. Answer questions directly using the browsing data provided.
 
 {context}
 
-ANALYSIS INSTRUCTIONS:
-- For statistical questions (counts, totals, rankings): Provide exact numbers, percentages, and rankings
-- For temporal questions (last Friday, yesterday, this week): Focus on the specified time period and mention the time range
-- For trend questions (patterns, changes over time): Identify patterns, frequency changes, and insights
-- For comparative questions (comparing different things): Show side-by-side analysis with metrics
-- For semantic questions (content meaning): Explain what the content is about and its context
-- For domain-specific questions: Focus on specific websites/domains with visit details
-- Always cite visit counts, URLs, and timestamps as evidence
-- Provide structured, clear answers with supporting data
-- If a time period is specified, clearly state the time range in your answer
+CRITICAL INSTRUCTIONS - Read the question type and respond accordingly:
+
+🔢 STATISTICAL QUESTIONS (how many, total, count, top X, most visited):
+- Give exact numbers first: "X visits" or "X visit count"
+- Include full URLs (github.com, linkedin.com, etc.) when available
+- List specific counts and rankings with domains
+- Always mention "visit count" for counting questions
+- Example: "GitHub (github.com): 25 visits - visit count data shows this is most frequent"
+
+📅 TEMPORAL QUESTIONS (yesterday, last week, recently, when):
+- Focus only on the specified time period
+- State the time range clearly: "Between [date] and [date]"
+- List chronological activities with URLs
+
+📖 SEMANTIC QUESTIONS (what is, explain, about):
+- Define/explain based on the content you visited
+- Quote relevant excerpts from page content
+- Include URLs as sources: "based on content from github.com"
+
+⚖️ COMPARATIVE QUESTIONS (vs, more than, compare, which):
+- Direct comparison with numbers: "GitHub: X visits vs LinkedIn: Y visits"
+- Clear winner statement: "You visit GitHub more than LinkedIn"
+- Include domains and exact visit counts
+
+📍 FACTUAL QUESTIONS (when did, where, who, first time):
+- Give specific dates/times if available
+- Quote exact URLs or page titles as evidence
+- If no data available, say "No records found"
+
+RESPONSE RULES:
+1. Start with the direct answer (no introductions)
+2. Always include visit counts and domain names (github.com, linkedin.com, etc.)
+3. Use bullet points for multiple items
+4. Quote exact URLs, visit counts, and dates as evidence
+5. Be concise but complete - include key terms like "visit count", domain names
+6. If unsure, say "Based on available data" then give your best answer
 
 Question: {question}
 
-Provide a comprehensive answer with:
-1. Direct answer to the question with specific data
-2. Supporting evidence (visit counts, URLs, timestamps)
-3. Relevant insights and patterns
-4. Clear structure and formatting
-5. Time period context if applicable
-
-Answer:
-"""
+Answer:"""
     )
     
     qa = RetrievalQA.from_chain_type(
