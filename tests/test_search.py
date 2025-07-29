@@ -41,6 +41,7 @@ def load_real_world_urls():
 @pytest.fixture(scope="module")
 def setup_history_and_embeddings(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("search")
+    chroma_dir = tmp_path / 'chroma_db'
     now = datetime.now()
     chrome_epoch = datetime(1601, 1, 1)
     def to_chrome_time(dt):
@@ -59,14 +60,15 @@ def setup_history_and_embeddings(tmp_path_factory):
         with_content=True,
         embed=True,
         embedder_backend='sentence-transformers',
+        persist_directory=str(chroma_dir)
     )
-    return url_title
+    return url_title, str(chroma_dir)
 
 def test_semantic_search(setup_history_and_embeddings):
-    url_title = setup_history_and_embeddings
+    url_title, chroma_dir = setup_history_and_embeddings
     # Search for each title using the full title as the query
     for url, title in url_title:
-        results = semantic_search(title, top_k=3, embedder_backend='sentence-transformers')
+        results = semantic_search(title, top_k=3, embedder_backend='sentence-transformers', persist_directory=chroma_dir)
         assert isinstance(results, list)
         if results:
             contentful = [r for r in results if not r.get('error') and (r.get('document') or r.get('title'))]
@@ -80,10 +82,10 @@ def test_semantic_search(setup_history_and_embeddings):
             # Do not fail the test if not found, just print debug info
 
 
-def test_semantic_search_no_results():
-    # Query that should not match anything
+def test_semantic_search_no_results(temp_vector_store_dir):
+    # Query that should not match anything - using isolated empty database
     query = 'this query should not match anything'
-    results = semantic_search(query, top_k=3, embedder_backend='sentence-transformers')
+    results = semantic_search(query, top_k=3, embedder_backend='sentence-transformers', persist_directory=temp_vector_store_dir)
     assert isinstance(results, list)
     # None of the results should contain the query string in their document or title
     for r in results:
@@ -92,46 +94,46 @@ def test_semantic_search_no_results():
         assert query not in doc and query not in title
 
 
-def test_semantic_search_empty_query():
-    # Empty string query
-    results = semantic_search('', top_k=3, embedder_backend='sentence-transformers')
+def test_semantic_search_empty_query(temp_vector_store_dir):
+    # Empty string query - using isolated database
+    results = semantic_search('', top_k=3, embedder_backend='sentence-transformers', persist_directory=temp_vector_store_dir)
     assert isinstance(results, list)
     # Should not raise, may return empty or error results
 
 
-def test_semantic_search_none_query():
+def test_semantic_search_none_query(temp_vector_store_dir):
     # None as query (should handle gracefully)
     with pytest.raises(Exception):
-        semantic_search(None, top_k=3, embedder_backend='sentence-transformers')
+        semantic_search(None, top_k=3, embedder_backend='sentence-transformers', persist_directory=temp_vector_store_dir)
 
 
 def test_llm_qa_search(setup_history_and_embeddings):
-    url_title = setup_history_and_embeddings
+    url_title, chroma_dir = setup_history_and_embeddings
     # Only run if Ollama and model are available (skip if not)
     try:
-        result = llm_qa_search("AI", top_k=3, llm='ollama', llm_model='llama3.2:latest')
+        result = llm_qa_search("AI", top_k=3, persist_directory=chroma_dir)
     except Exception as e:
         pytest.skip(f"Ollama or model not available: {e}")
     assert 'answer' in result
     assert 'sources' in result
 
 
-def test_llm_qa_search_no_results(monkeypatch):
+def test_llm_qa_search_no_results(monkeypatch, temp_vector_store_dir):
     # Simulate LLM QA returning no sources
-    def dummy_qa_search(query, top_k, llm, llm_model):
+    def dummy_qa_search(query, top_k=5, persist_directory=None):
         return {'answer': '', 'sources': []}
     monkeypatch.setattr('historyhounder.search.llm_qa_search', dummy_qa_search)
-    result = dummy_qa_search('no results expected', 3, 'ollama', 'llama3.2:latest')
+    result = dummy_qa_search('no results expected', 3, persist_directory=temp_vector_store_dir)
     assert result['answer'] == ''
     assert result['sources'] == []
 
 
-def test_llm_qa_search_malformed_query(monkeypatch):
+def test_llm_qa_search_malformed_query(monkeypatch, temp_vector_store_dir):
     # Simulate LLM QA with malformed query
-    def dummy_qa_search(query, top_k, llm, llm_model):
+    def dummy_qa_search(query, top_k=5, persist_directory=None):
         if query is None:
             raise ValueError('Query cannot be None')
         return {'answer': 'ok', 'sources': ['src']}
     monkeypatch.setattr('historyhounder.search.llm_qa_search', dummy_qa_search)
     with pytest.raises(ValueError):
-        dummy_qa_search(None, 3, 'ollama', 'llama3.2:latest')
+        dummy_qa_search(None, 3, persist_directory=temp_vector_store_dir)

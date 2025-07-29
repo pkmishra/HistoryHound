@@ -140,7 +140,7 @@ def llm_qa_search(query, top_k=5, persist_directory='chroma_db'):
     try:
         # Try to get semantic search results
         if store.count() > 0:
-            results = semantic_search(query, top_k=adaptive_k)
+            results = semantic_search(query, top_k=adaptive_k, persist_directory=persist_directory)
             if results:
                 documents = [result['document'] for result in results]
                 metadatas = [result['metadata'] for result in results]
