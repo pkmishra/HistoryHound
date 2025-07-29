@@ -120,7 +120,7 @@ def calculate_relevance_score(document, metadata, query_lower, query_keywords):
 
 def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', persist_directory='chroma_db'):
     """
-    Enhanced Q&A search with temporal filtering support.
+    Enhanced Q&A search with temporal filtering support and context optimization.
     """
     embedder = get_embedder(embedder_backend)
     store = ChromaVectorStore(persist_directory=persist_directory)
@@ -128,6 +128,10 @@ def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', pers
     # Parse temporal references from the query
     filtered_query, start_date, end_date = parse_temporal_reference(query)
     temporal_filter = (start_date, end_date) if start_date and end_date else None
+    
+    # Determine question type for adaptive context sizing
+    question_type = classify_question_type(query)
+    adaptive_top_k = get_adaptive_context_size(question_type, top_k)
     
     # Get all documents for enhanced context processing
     # Use a simple query to get all documents
@@ -163,21 +167,28 @@ def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', pers
     # Create enhanced context with temporal filtering
     enhanced_context = enhance_context_for_qa(documents, metadatas, temporal_filter)
     
-    # For semantic search, use the filtered query
+    # For semantic search, use the filtered query with improved relevance
     if filtered_query.strip():
         try:
-            query_emb = embedder.embed([filtered_query])[0]
-            results = store.query(query_emb, top_k=top_k)
+            # Use our improved semantic search for better document selection
+            relevant_results = semantic_search(filtered_query, top_k=adaptive_top_k, 
+                                             embedder_backend=embedder_backend, 
+                                             persist_directory=persist_directory)
             
-            # Update documents and metadatas with filtered results
-            if results['documents'][0]:
-                documents = results['documents'][0]
-                metadatas = results['metadatas'][0]
-                # Re-create enhanced context with filtered results
+            if relevant_results:
+                # Extract documents and metadatas from semantic search results
+                documents = [result['document'] for result in relevant_results]
+                metadatas = [result['metadata'] for result in relevant_results]
+                
+                # Apply context optimization
+                documents, metadatas = optimize_context_window(documents, metadatas, question_type)
+                
+                # Re-create enhanced context with optimized results
                 enhanced_context = enhance_context_for_qa(documents, metadatas, temporal_filter)
         except Exception:
-            # If semantic search fails, continue with all documents
-            pass
+            # If semantic search fails, continue with all documents but optimize them
+            documents, metadatas = optimize_context_window(documents, metadatas, question_type)
+            enhanced_context = enhance_context_for_qa(documents, metadatas, temporal_filter)
     
     # Create a proper retriever for the QA chain
     from langchain_core.retrievers import BaseRetriever
@@ -211,8 +222,170 @@ def llm_qa_search(query, top_k=5, embedder_backend='sentence-transformers', pers
     # Get answer using enhanced QA
     result = answer_question_ollama(query, retriever)
     
+    # IMPORTANT: Filter sources to ensure they match question relevance
+    # The LangChain retriever might return all documents, but we want only relevant ones
+    filtered_sources = filter_sources_by_relevance(result.get('sources', []), query)
+    result['sources'] = filtered_sources
+    
     # Add enhanced context to the result
     result['enhanced_context'] = enhanced_context
     
     store.close()
-    return result 
+    return result
+
+
+def classify_question_type(query):
+    """
+    Classify question type for adaptive context optimization.
+    """
+    query_lower = query.lower()
+    
+    # Statistical questions need less content but more metadata
+    if any(phrase in query_lower for phrase in ['how many', 'how much', 'count', 'total', 'most visited', 'top ', 'number of']):
+        return 'statistical'
+    
+    # Comparative questions need data from multiple sources  
+    elif any(phrase in query_lower for phrase in ['compare', ' vs ', 'versus', 'more than', 'better than', 'or ', ' vs. ', 'difference between']):
+        return 'comparative'
+    
+    # Semantic questions need full content for understanding
+    elif any(phrase in query_lower for phrase in ['what is', 'what are', 'explain', 'about', 'describe', 'topics', 'research', 'learn']):
+        return 'semantic'
+    
+    # Temporal questions need chronological context
+    elif any(phrase in query_lower for phrase in ['yesterday', 'last week', 'recently', 'when', 'time', 'today', 'this week', 'last month']):
+        return 'temporal'
+    
+    # Default to factual
+    return 'factual'
+
+
+def get_adaptive_context_size(question_type, base_top_k):
+    """
+    Determine optimal context size based on question type.
+    """
+    if question_type == 'statistical':
+        return base_top_k  # Standard size for counting/stats
+    elif question_type == 'temporal':
+        return base_top_k + 2  # Slightly more for time-based queries
+    elif question_type == 'semantic':
+        return min(base_top_k + 5, 10)  # More content for understanding
+    elif question_type == 'comparative':
+        return base_top_k + 3  # More sources for comparison
+    else:  # factual
+        return base_top_k
+
+
+def optimize_context_window(documents, metadatas, question_type):
+    """
+    Optimize context window by removing duplicates and truncating content based on question type.
+    """
+    if not documents or not metadatas:
+        return documents, metadatas
+    
+    # 1. Remove duplicate content
+    seen_content = set()
+    unique_docs = []
+    unique_metas = []
+    
+    for doc, meta in zip(documents, metadatas):
+        # Create a fingerprint based on URL and first 100 characters
+        url = meta.get('url', '')
+        content_fingerprint = f"{url}:{doc[:100]}"
+        
+        if content_fingerprint not in seen_content:
+            seen_content.add(content_fingerprint)
+            unique_docs.append(doc)
+            unique_metas.append(meta)
+    
+    # 2. Adaptive content truncation based on question type
+    optimized_docs = []
+    for doc in unique_docs:
+        if question_type == 'statistical':
+            # Statistical questions need minimal content, focus on metadata
+            optimized_docs.append(doc[:300])  # Short content
+        elif question_type == 'temporal':
+            # Temporal questions need moderate content with time context
+            optimized_docs.append(doc[:500])  # Medium content
+        elif question_type == 'semantic':
+            # Semantic questions need full content for understanding
+            optimized_docs.append(doc[:1000])  # Longer content
+        elif question_type == 'comparative':
+            # Comparative questions need moderate content from multiple sources
+            optimized_docs.append(doc[:400])  # Balanced content
+        else:  # factual
+            optimized_docs.append(doc[:600])  # Standard content
+    
+    return optimized_docs, unique_metas 
+
+
+def filter_sources_by_relevance(sources, query, max_sources=5):
+    """
+    Filter sources to ensure they match the question relevance.
+    This addresses the issue where irrelevant sources appear in the UI.
+    """
+    if not sources:
+        return sources
+    
+    import re
+    
+    # Extract query keywords for relevance filtering
+    query_lower = query.lower()
+    clean_query = re.sub(r'[^\w\s]', '', query_lower)
+    query_keywords = set(word for word in clean_query.split() if len(word) > 1)
+    
+    # Score each source for relevance to the query
+    scored_sources = []
+    for source in sources:
+        if isinstance(source, dict):
+            # Calculate relevance score for this source
+            score = calculate_source_relevance_score(source, query_lower, query_keywords)
+            scored_sources.append((source, score))
+        else:
+            # Handle old format if needed
+            scored_sources.append((source, 0.0))
+    
+    # Sort by relevance score and return top sources
+    scored_sources.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return only sources with positive relevance scores
+    relevant_sources = [source for source, score in scored_sources[:max_sources] if score > 0]
+    
+    # If no relevant sources found, return at least one source to avoid empty results
+    if not relevant_sources and scored_sources:
+        relevant_sources = [scored_sources[0][0]]
+    
+    return relevant_sources
+
+
+def calculate_source_relevance_score(source, query_lower, query_keywords):
+    """
+    Calculate relevance score for a source based on the query.
+    """
+    score = 0.0
+    
+    url = source.get('url', '').lower()
+    title = source.get('title', '').lower()
+    domain = source.get('domain', '').lower()
+    content = source.get('content', '').lower()
+    
+    # 1. Domain name matching (highest priority)
+    for keyword in query_keywords:
+        if keyword in ['github', 'linkedin', 'stackoverflow', 'google', 'youtube', 'facebook', 'twitter']:
+            if keyword in url or keyword in domain:
+                score += 20.0
+                break
+    
+    # 2. Title keyword matching
+    title_matches = sum(1 for keyword in query_keywords if keyword in title)
+    score += title_matches * 5.0
+    
+    # 3. Content keyword matching
+    content_matches = sum(1 for keyword in query_keywords if keyword in content)
+    score += content_matches * 2.0
+    
+    # 4. URL keyword matching (general)
+    url_matches = sum(1 for keyword in query_keywords if keyword in url)
+    score += url_matches * 3.0
+    
+    return score 
