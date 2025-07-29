@@ -40,32 +40,36 @@ uv run python your_script.py
 
 ## Features
 
-- **Advanced Q&A System**: Uses state-of-the-art LLM technology with prompt engineering for different question types (statistical, temporal, semantic, comparative, factual)
+- **Advanced Q&A System**: Uses Instructor + Ollama for type-safe structured responses with prompt engineering for different question types (statistical, temporal, semantic, comparative, factual)
 - **Intelligent Context Optimization**: Dynamically adjusts context size and filtering based on question type
 - **Source Relevance Filtering**: Post-processes results to ensure only highly relevant sources are displayed
-- **Model Caching**: Optimized to prevent redundant model downloads and loading
+- **Model Caching**: Optimized to prevent redundant model downloads and loading with two-level caching system
+- **Database Isolation**: Complete test isolation with configurable database directories via environment variables (`HISTORYHOUNDER_VECTOR_STORE_DIR`, `HISTORYHOUNDER_HISTORY_DB_DIR`)
+- **Type Safety**: Instructor-based structured output ensures reliable, validated responses from LLM
+- **Privacy-First**: All processing happens locally - no data leaves your machine
 - **Web Interface**: Easy-to-use browser extension for querying your history
-- **REST API**: FastAPI backend following OpenAPI specification
-- **Comprehensive Testing**: Full test suite with integration tests (no mocking approach)
+- **REST API**: FastAPI backend following OpenAPI specification with proper error handling
+- **Comprehensive Testing**: Full test suite with integration tests (no mocking approach) and complete workspace isolation
 
 ## Architecture
 
 ### Core Components
 
-1. **History Extraction** (`extract_chrome_history.py`): Extracts browsing history from Chrome
-2. **Content Fetching** (`content_fetcher.py`): Retrieves and processes web page content
-3. **Vector Store** (`vector_store.py`): ChromaDB-based storage for embeddings
+1. **History Extraction** (`extract_chrome_history.py`): Extracts browsing history from Chrome and other browsers
+2. **Content Fetching** (`content_fetcher.py`): Retrieves and processes web page content with security validation
+3. **Vector Store** (`vector_store.py`): ChromaDB-based storage for embeddings with isolation support
 4. **Search Engine** (`search.py`): Advanced Q&A with context optimization and source filtering
-5. **LLM Integration** (`llm/ollama_qa.py`): Ollama-based question answering with structured output
-6. **Web Server** (`server.py`): FastAPI backend
+5. **LLM Integration** (`llm/ollama_qa.py`): Instructor-based structured output with Ollama for type-safe responses
+6. **Web Server** (`server.py`): FastAPI backend with configurable database directories
 7. **Browser Extension** (`extension/`): Chrome extension for user interface
+8. **Database Isolation** (`conftest.py`, environment variables): Complete test isolation system
 
 ### Data Flow
 
-1. Browser history → Content fetching → Text processing
-2. Text → Embeddings → Vector storage (ChromaDB)  
-3. User query → Context optimization → LLM processing → Structured response
-4. Response → Source filtering → User interface
+1. Browser history → Content fetching → Security validation → Text processing
+2. Text → Embeddings → Vector storage (ChromaDB with isolation)  
+3. User query → Question type classification → Context optimization → Instructor/Ollama processing → Type-safe structured response
+4. Response → Source relevance filtering → User interface
 
 ## Development Philosophy
 
@@ -82,9 +86,10 @@ This project follows a **comprehensive testing and integration** approach:
 
 ### Core Technologies
 
-#### **Python 3.9+**
-- **Rationale**: Modern Python features, excellent ecosystem for ML/AI, strong typing support
-- **Benefits**: Rich library ecosystem, easy deployment, cross-platform compatibility
+#### **Python 3.12**
+- **Rationale**: Latest stable Python with modern features, excellent ecosystem for ML/AI, strong typing support
+- **Benefits**: Rich library ecosystem, performance improvements, enhanced error messages, cross-platform compatibility
+- **Requirement**: Project requires Python 3.12+ for optimal compatibility with all dependencies
 
 #### **ChromaDB (Vector Database)**
 - **Rationale**: Local-first, Python-native, excellent for embeddings and metadata
@@ -102,21 +107,23 @@ This project follows a **comprehensive testing and integration** approach:
   - Multiple model options (all-MiniLM-L6-v2, etc.)
   - Easy to swap models
 
-#### **LangChain (LLM Framework)**
-- **Rationale**: Mature framework for LLM applications, excellent RAG support
+#### **Instructor (Structured LLM Output)**
+- **Rationale**: Modern framework for structured output from LLMs, replaces LangChain for better type safety
 - **Benefits**:
-  - Proven RAG patterns
-  - Multiple LLM provider support
-  - Active development and community
-  - Future-proofed for LangChain 1.0+
+  - Type-safe structured responses with Pydantic models
+  - Simplified LLM interaction patterns
+  - Better error handling and validation
+  - Cleaner, more maintainable code
+  - Direct integration with Ollama for local processing
 
 #### **Ollama (Local LLM)**
 - **Rationale**: Easy-to-use local LLM runner, privacy-first
 - **Benefits**:
   - No data leaves your machine
-  - Multiple model support
+  - Multiple model support (llama3.2:latest default)
   - Simple setup and management
   - Active development
+  - Direct integration with Instructor for structured output
 
 ### Content Extraction Technologies
 
@@ -137,6 +144,14 @@ This project follows a **comprehensive testing and integration** approach:
 #### **pytest**
 - **Rationale**: Modern, feature-rich testing framework
 - **Benefits**: Fixtures, parametrization, excellent reporting, plugin ecosystem
+
+#### **Database Isolation System**
+- **Rationale**: Complete separation of test and production data for safety and reliability
+- **Benefits**: 
+  - Environment variable configuration (`HISTORYHOUNDER_VECTOR_STORE_DIR`, `HISTORYHOUNDER_HISTORY_DB_DIR`)
+  - Isolated test fixtures with automatic cleanup
+  - Zero workspace contamination during testing
+  - Safe parallel test execution
 
 #### **uv (Package Management)**
 - **Rationale**: Fast, modern Python package manager
@@ -170,10 +185,11 @@ This project follows a **comprehensive testing and integration** approach:
 - **Cohere**: Rejected due to API dependency
 - **Hugging Face Inference API**: Rejected due to API dependency
 
-#### **LLM Providers**
+#### **LLM Frameworks**
+- **LangChain**: Migrated away from due to complexity and overhead for simple structured output needs
 - **OpenAI GPT**: Rejected due to privacy concerns and API dependency
-- **Anthropic Claude**: Rejected due to privacy concerns and API dependency
-- **Local models via Hugging Face**: Considered but Ollama provides better UX
+- **Anthropic Claude**: Rejected due to privacy concerns and API dependency  
+- **Local models via Hugging Face**: Considered but Ollama + Instructor provides better UX and type safety
 
 #### **Content Extraction**
 - **newspaper3k**: Considered but readability-lxml more robust
@@ -312,10 +328,11 @@ The server provides RESTful API endpoints for:
 - **ReDoc**: `http://localhost:8080/redoc`
 - **OpenAPI JSON**: `http://localhost:8080/openapi.json`
 
-### **Ollama Model Configuration**
+### **Environment Variable Configuration**
 
-The server uses Ollama for AI Q&A functionality. You can configure the model using environment variables:
+The server supports several environment variables for configuration:
 
+#### **Ollama Model Configuration**
 ```bash
 # Use default model (llama3.2:latest)
 uv run python -m historyhounder.server --port 8080
@@ -328,6 +345,21 @@ HISTORYHOUNDER_OLLAMA_MODEL=llama3.1:latest uv run python -m historyhounder.serv
 
 # Use a custom model
 HISTORYHOUNDER_OLLAMA_MODEL=my-custom-model uv run python -m historyhounder.server --port 8080
+```
+
+#### **Database Directory Configuration**
+```bash
+# Use custom vector store directory (for testing or isolation)
+HISTORYHOUNDER_VECTOR_STORE_DIR=/custom/path/chroma_db uv run python -m historyhounder.server
+
+# Use custom history database directory (for testing or isolation)
+HISTORYHOUNDER_HISTORY_DB_DIR=/custom/path/history_db uv run python -m historyhounder.server
+
+# Combine multiple environment variables
+HISTORYHOUNDER_OLLAMA_MODEL=llama3.1:latest \
+HISTORYHOUNDER_VECTOR_STORE_DIR=/isolated/chroma \
+HISTORYHOUNDER_HISTORY_DB_DIR=/isolated/history \
+uv run python -m historyhounder.server --port 8080
 ```
 
 **Available Models**:
