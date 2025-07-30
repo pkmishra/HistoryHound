@@ -174,6 +174,16 @@ def filter_by_date_range(metadatas, start_date, end_date):
             try:
                 # Parse visit time - handle different formats
                 visit_time = date_parser.parse(visit_time_str)
+                
+                # CRITICAL FIX: Ensure timezone consistency
+                # Make both dates naive for comparison (remove timezone info if present)
+                if visit_time.tzinfo is not None:
+                    visit_time = visit_time.replace(tzinfo=None)
+                if start_date.tzinfo is not None:
+                    start_date = start_date.replace(tzinfo=None)
+                if end_date.tzinfo is not None:
+                    end_date = end_date.replace(tzinfo=None)
+                
                 if start_date <= visit_time <= end_date:
                     filtered.append(meta)
             except (ValueError, TypeError):

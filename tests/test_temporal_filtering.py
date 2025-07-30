@@ -279,18 +279,120 @@ class TestTemporalFiltering:
                 enhanced_context = result['enhanced_context']
                 assert 'browsing_summary' in enhanced_context
                 
-                # Check if temporal period is mentioned in answer
-                answer_lower = result['answer'].lower()
-                temporal_keywords = ['friday', 'yesterday', 'today', 'week', 'time', 'period']
-                has_temporal_context = any(keyword in answer_lower for keyword in temporal_keywords)
+                answer = result['answer']
+                answer_lower = answer.lower()
+                
+                # STRONG TEMPORAL ASSERTIONS: Verify temporal filtering actually worked
+                if "last Friday" in question.lower():
+                    # Should show Stack Overflow (10 visits on last Friday)
+                    assert "stackoverflow" in answer_lower or "stack overflow" in answer_lower, f"Expected Stack Overflow for last Friday, got: {answer}"
+                    assert "10" in answer or "ten" in answer_lower, f"Expected 10 visits for Stack Overflow on last Friday, got: {answer}"
+                    
+                elif "yesterday" in question.lower():
+                    if "github" in question.lower():
+                        # "How many times did I visit GitHub yesterday?" should be 0 or "not visited"
+                        # GitHub was visited TODAY (25 visits), not yesterday
+                        github_mentioned = "github" in answer_lower
+                        if github_mentioned:
+                            # If GitHub is mentioned, it should clarify it wasn't visited yesterday
+                            no_visits_indicators = ["0", "zero", "not visited", "didn't visit", "no visit", "not access"]
+                            has_no_visits = any(indicator in answer_lower for indicator in no_visits_indicators)
+                            assert has_no_visits, f"Expected 0 GitHub visits yesterday (GitHub was visited today), got: {answer}"
+                    else:
+                        # General yesterday question should show LinkedIn (15 visits yesterday)
+                        assert "linkedin" in answer_lower, f"Expected LinkedIn for yesterday (15 visits), got: {answer}"
+                        assert "15" in answer or "fifteen" in answer_lower, f"Expected 15 visits for LinkedIn yesterday, got: {answer}"
+                        
+                elif "today" in question.lower():
+                    # Should show GitHub (25 visits today)
+                    assert "github" in answer_lower, f"Expected GitHub for today (25 visits), got: {answer}"
+                    assert "25" in answer or "twenty" in answer_lower, f"Expected 25 visits for GitHub today, got: {answer}"
+                    
+                elif "this week" in question.lower():
+                    # Should include multiple sites from this week
+                    week_domains = ["github", "linkedin"]  # Both today and yesterday are this week
+                    week_found = any(domain in answer_lower for domain in week_domains)
+                    assert week_found, f"Expected this week's sites (GitHub/LinkedIn), got: {answer}"
                 
                 print(f"✅ Temporal question: '{question}'")
-                print(f"   Answer length: {len(result['answer'])} chars")
-                print(f"   Has temporal context: {has_temporal_context}")
-                print(f"   Answer preview: {result['answer'][:100]}...")
+                print(f"   Answer: {answer[:150]}{'...' if len(answer) > 150 else ''}")
                 
             except Exception as e:
                 pytest.fail(f"Failed to process temporal question '{question}': {e}")
+        
+        store.close()
+    
+    def test_most_visited_yesterday_specific(self, temp_vector_store_dir, sample_data_with_dates):
+        """Test the specific user question: 'Most visited site yesterday'."""
+        documents, metadatas = sample_data_with_dates
+        
+        # Setup vector store
+        store = ChromaVectorStore(persist_directory=temp_vector_store_dir)
+        embedder = get_embedder('sentence-transformers')
+        embeddings = embedder.embed(documents)
+        store.add(documents, embeddings, metadatas)
+        
+        # Test the exact user question
+        question = "Most visited site yesterday"
+        result = llm_qa_search(question, top_k=5, persist_directory=temp_vector_store_dir)
+        
+        answer = result['answer']
+        answer_lower = answer.lower()
+        
+        print(f"\n🎯 TESTING USER'S SPECIFIC QUESTION")
+        print(f"Question: '{question}'")
+        print(f"Answer: {answer}")
+        print()
+        print(f"📊 Expected: LinkedIn (15 visits yesterday)")
+        print(f"📊 Data context:")
+        print(f"  - GitHub: 25 visits TODAY (should not appear)")
+        print(f"  - LinkedIn: 15 visits YESTERDAY (should be the answer)")
+        print(f"  - Stack Overflow: 10 visits LAST FRIDAY (should not appear)")
+        print(f"  - Others: older dates (should not appear)")
+        
+        # DEBUG: Check the enhanced context first
+        enhanced_context = result['enhanced_context']
+        summary = enhanced_context['browsing_summary']
+        
+        print(f"\n🔍 DEBUG ENHANCED CONTEXT:")
+        print(f"  Temporal period: {summary.get('temporal_period')}")
+        print(f"  Total visits: {summary['total_visits']}")
+        print(f"  Unique domains: {summary['unique_domains']}")
+        print(f"  Top domains: {summary.get('top_domains', [])}")
+        print(f"  Documents count: {len(enhanced_context.get('documents', []))}")
+        print(f"  Metadatas count: {len(enhanced_context.get('metadatas', []))}")
+        
+        # DEBUG: Check the raw metadatas in enhanced context
+        metadatas_in_context = enhanced_context.get('metadatas', [])
+        print(f"\n🔍 DEBUG METADATAS IN ENHANCED CONTEXT:")
+        for i, meta in enumerate(metadatas_in_context):
+            print(f"  [{i}] {meta.get('domain', 'no-domain')}: {meta.get('visit_count', 0)} visits at {meta.get('visit_time', 'no-time')}")
+        
+        # CRITICAL ASSERTION: Should show LinkedIn as most visited yesterday
+        assert "linkedin" in answer_lower, f"CRITICAL: Expected LinkedIn (15 visits yesterday) as answer, got: {answer}"
+        
+        # Should NOT show today's data (GitHub) or older data
+        assert "github" not in answer_lower or "not visited yesterday" in answer_lower, f"Should not mention GitHub (was visited today, not yesterday), got: {answer}"
+        assert "stackoverflow" not in answer_lower, f"Should not mention Stack Overflow (was visited last Friday, not yesterday), got: {answer}"
+        
+        # Should mention the visit count
+        visit_indicators = ["15", "fifteen"]
+        has_visit_count = any(indicator in answer for indicator in visit_indicators)
+        assert has_visit_count, f"Expected to mention 15 visits for LinkedIn yesterday, got: {answer}"
+        
+        # Verify enhanced context shows temporal filtering was applied
+        enhanced_context = result['enhanced_context']
+        summary = enhanced_context['browsing_summary']
+        
+        # If temporal filtering worked, should only show yesterday's data
+        temporal_period = summary.get('temporal_period')
+        if temporal_period:
+            print(f"✅ Temporal period detected: {temporal_period}")
+            # Should only have LinkedIn's visits (15) if filtering worked
+            assert summary['total_visits'] == 15, f"Expected 15 total visits (only LinkedIn yesterday), got {summary['total_visits']}"
+            assert summary['unique_domains'] == 1, f"Expected 1 domain (only LinkedIn yesterday), got {summary['unique_domains']}"
+        else:
+            print(f"⚠️ No temporal period found - filtering may not be working")
         
         store.close()
     
