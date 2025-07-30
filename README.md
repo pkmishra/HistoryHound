@@ -423,20 +423,7 @@ The test suite provides comprehensive coverage including:
 - Integration tests use pytest fixtures to ensure each test uses a unique ChromaDB collection, providing full isolation and preventing cross-test contamination.
 - **Tests now use real datetime objects and edge-case metadata** to ensure all metadata is properly converted and stored in ChromaDB. This catches issues with datetime, None, lists, dicts, and other non-primitive types.
 
-### CLI Design Best Practices
 
-The CLI (`historyhounder/cli.py`) is designed as a thin entry point:
-- **No business logic should reside in the CLI.**
-- All core logic (history extraction, content fetching, embedding, vector store operations, etc.) lives in modules under `historyhounder/`.
-- The CLI is responsible only for argument parsing, user interaction, and delegating to the appropriate functions/classes.
-- This separation ensures:
-  - **Testability**: Core logic can be tested directly, without invoking the CLI.
-  - **Reusability**: Logic can be reused in other interfaces (APIs, GUIs, scripts).
-  - **Maintainability**: The CLI remains simple and less prone to bugs.
-
-If you notice business logic in the CLI, consider refactoring it into a module and calling it from the CLI entry point.
-
----
 
 ## Project Structure
 ```
@@ -474,18 +461,6 @@ HistoryHounder implements comprehensive security measures:
 
 See `SECURITY.md` for detailed security guidelines and best practices.
 
----
-
-## Notes
-- All commands should be run with `uv run ...` for correct environment isolation.
-- The tool is modular and can be extended to support more LLMs, embedders, or browsers.
-- For best results, keep your browser closed while extracting history (to ensure the latest data is flushed to disk).
-- The test suite is robust and covers both unit and end-to-end integration scenarios, including real-world and edge-case metadata handling.
-- **LangChain integration uses the new split-out packages (`langchain-huggingface`, `langchain-chroma`, `langchain-ollama`) and is future-proofed for LangChain 1.0+.**
-- **Comprehensive error handling and edge case testing ensures reliability in production environments.**
-- **Security is a first-class concern with automated testing and validation.**
-
----
 
 ## License
 MIT (or your chosen license)
