@@ -212,7 +212,13 @@ class TestEnhancedQAIntegration:
         store.close()
     
     def test_domain_specific_questions(self, temp_vector_store_dir, sample_browsing_data):
-        """Test that domain-specific questions are handled correctly."""
+        """Test that domain-specific questions are handled correctly.
+        
+        IMPORTANT: This test was previously passing with weak assertions that only checked
+        if domain keywords appeared anywhere in the response. The original bug was that
+        responses showed 'unknown (unknown): X visits' instead of actual domain names.
+        Now we have strong assertions that verify actual domain names appear.
+        """
         documents, metadatas = sample_browsing_data
         
         # Setup vector store
@@ -233,14 +239,77 @@ class TestEnhancedQAIntegration:
             result = llm_qa_search(question, top_k=5, persist_directory=temp_vector_store_dir)
             
             # Verify the answer contains domain-specific information
-            answer = result['answer'].lower()
+            answer = result['answer']
+            answer_lower = answer.lower()
             
-            # Should mention the specific domain
-            domain_keywords = ['github', 'linkedin', 'stack overflow', 'youtube']
-            assert any(keyword in answer for keyword in domain_keywords)
+            # STRONG ASSERTION: Should show actual domain names, not 'unknown'
+            assert "unknown (unknown)" not in answer_lower, f"Answer should not contain 'unknown (unknown)', got: {answer}"
+            assert not answer_lower.startswith("unknown"), f"Answer should not start with 'unknown', got: {answer}"
+            
+            # Should mention the specific domain with proper format
+            expected_domains = {
+                'github': ['github.com', 'github'],
+                'linkedin': ['linkedin.com', 'linkedin'], 
+                'stack overflow': ['stackoverflow.com', 'stack overflow'],
+                'youtube': ['youtube.com', 'youtube']
+            }
+            
+            # Find which domain this question is about
+            question_lower = question.lower()
+            relevant_domain = None
+            for domain_key, domain_variants in expected_domains.items():
+                if domain_key in question_lower:
+                    relevant_domain = domain_variants
+                    break
+            
+            if relevant_domain:
+                domain_found = any(variant in answer_lower for variant in relevant_domain)
+                assert domain_found, f"Expected one of {relevant_domain} in answer for question '{question}', got: {answer}"
             
             print(f"✅ Domain question: '{question}'")
-            print(f"   Answer mentions domain: {len(answer)} chars")
+            print(f"   Answer: {answer[:100]}{'...' if len(answer) > 100 else ''}")
+        
+        store.close()
+    
+    def test_most_visited_site_question(self, temp_vector_store_dir, sample_browsing_data):
+        """Test the specific question that was failing: 'Site with the most number of visits today'."""
+        documents, metadatas = sample_browsing_data
+        
+        # Setup vector store
+        store = ChromaVectorStore(persist_directory=temp_vector_store_dir)
+        embedder = get_embedder('sentence-transformers')
+        embeddings = embedder.embed(documents)
+        store.add(documents, embeddings, metadatas)
+        
+        # Test the exact question that was showing 'unknown (unknown)'
+        question = "Site with the most number of visits today"
+        result = llm_qa_search(question, top_k=5, persist_directory=temp_vector_store_dir)
+        
+        answer = result['answer']
+        answer_lower = answer.lower()
+        
+        print(f"\n🧪 Testing specific failing question: '{question}'")
+        print(f"📝 Answer: {answer}")
+        
+        # CRITICAL: This should NOT show 'unknown (unknown)'
+        assert "unknown (unknown)" not in answer_lower, f"CRITICAL: Answer contains 'unknown (unknown)', this was the original bug! Answer: {answer}"
+        assert not answer_lower.startswith("unknown"), f"Answer should not start with 'unknown', got: {answer}"
+        
+        # Should show an actual domain name
+        common_domains = ['github.com', 'linkedin.com', 'stackoverflow.com', 'youtube.com', 'example.com']
+        domain_found = any(domain in answer_lower for domain in common_domains)
+        
+        # If no common domains found, at least check for domain-like patterns
+        if not domain_found:
+            import re
+            domain_pattern = r'\b\w+\.\w+\b'  # Basic pattern like "site.com"
+            domain_matches = re.findall(domain_pattern, answer_lower)
+            assert domain_matches, f"Expected to find domain names (like 'site.com') in answer, got: {answer}"
+        
+        # Should mention visit counts or statistics
+        stats_keywords = ['visit', 'most', 'frequent', 'count']
+        stats_found = any(keyword in answer_lower for keyword in stats_keywords)
+        assert stats_found, f"Expected statistical information in answer, got: {answer}"
         
         store.close()
     
