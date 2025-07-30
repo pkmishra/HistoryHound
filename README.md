@@ -423,20 +423,7 @@ The test suite provides comprehensive coverage including:
 - Integration tests use pytest fixtures to ensure each test uses a unique ChromaDB collection, providing full isolation and preventing cross-test contamination.
 - **Tests now use real datetime objects and edge-case metadata** to ensure all metadata is properly converted and stored in ChromaDB. This catches issues with datetime, None, lists, dicts, and other non-primitive types.
 
-### CLI Design Best Practices
 
-The CLI (`historyhounder/cli.py`) is designed as a thin entry point:
-- **No business logic should reside in the CLI.**
-- All core logic (history extraction, content fetching, embedding, vector store operations, etc.) lives in modules under `historyhounder/`.
-- The CLI is responsible only for argument parsing, user interaction, and delegating to the appropriate functions/classes.
-- This separation ensures:
-  - **Testability**: Core logic can be tested directly, without invoking the CLI.
-  - **Reusability**: Logic can be reused in other interfaces (APIs, GUIs, scripts).
-  - **Maintainability**: The CLI remains simple and less prone to bugs.
-
-If you notice business logic in the CLI, consider refactoring it into a module and calling it from the CLI entry point.
-
----
 
 ## Project Structure
 ```
@@ -474,18 +461,6 @@ HistoryHounder implements comprehensive security measures:
 
 See `SECURITY.md` for detailed security guidelines and best practices.
 
----
-
-## Notes
-- All commands should be run with `uv run ...` for correct environment isolation.
-- The tool is modular and can be extended to support more LLMs, embedders, or browsers.
-- For best results, keep your browser closed while extracting history (to ensure the latest data is flushed to disk).
-- The test suite is robust and covers both unit and end-to-end integration scenarios, including real-world and edge-case metadata handling.
-- **LangChain integration uses the new split-out packages (`langchain-huggingface`, `langchain-chroma`, `langchain-ollama`) and is future-proofed for LangChain 1.0+.**
-- **Comprehensive error handling and edge case testing ensures reliability in production environments.**
-- **Security is a first-class concern with automated testing and validation.**
-
----
 
 ## License
 MIT (or your chosen license)
@@ -509,4 +484,92 @@ collection = client.get_or_create_collection("history")
 - This is now the default in `historyhounder/vector_store.py` and is required for all integration tests to pass.
 - For more details, see [ChromaDB Issue: An instance of Chroma already exists for ... with different settings](https://blog.csdn.net/DLW__/article/details/145953793)
 
+## TODO - Future Enhancements
+
+### 🚀 **Planned Features**
+
+#### **User Experience Improvements**
+- [ ] **Keyboard Shortcuts**: Add keyboard shortcuts for common actions (Ctrl+S for search, etc.)
+- [ ] **Search Suggestions**: Auto-complete and search suggestions based on history
+- [ ] **Search History**: Remember and display recent searches
+- [ ] **Voice Input**: Speech-to-text functionality for AI chat
+- [ ] **Custom Themes**: Light/dark mode toggle with theme customization
+- [ ] **Export Features**: Export search results, statistics, or chat history
+- [ ] **Bookmark Integration**: Connect with browser bookmarks for enhanced search
+
+#### **Advanced Functionality**
+- [ ] **Advanced Filters**: Date range picker, file type filters, visit count filters
+- [ ] **Smart Categories**: Auto-categorize websites (work, personal, shopping, etc.)
+- [ ] **Search Analytics**: Track search patterns and popular queries
+- [ ] **Offline Mode**: Cache data for offline access and search
+- [ ] **Batch Operations**: Select multiple history items for bulk actions
+- [ ] **Search Templates**: Save and reuse complex search queries
+
+#### **AI & Analytics Enhancements**
+- [ ] **Personalized Insights**: AI-generated insights about browsing patterns
+- [ ] **Predictive Search**: Suggest searches based on time of day and patterns
+- [ ] **Content Analysis**: Analyze page content for better categorization
+- [ ] **Usage Analytics**: Detailed analytics dashboard with charts and graphs
+- [ ] **Export Reports**: Generate PDF/CSV reports of browsing statistics
+
+#### **Integration & Connectivity**
+- [ ] **Cross-Browser Sync**: Sync settings and data across browsers
+- [ ] **Cloud Backup**: Optional cloud backup of settings and preferences
+- [ ] **API Integration**: Connect with external services (Notion, Obsidian, etc.)
+- [ ] **Webhook Support**: Send notifications to external services
+- [ ] **Mobile Companion**: Mobile app for viewing statistics and insights
+
+#### **Performance & Technical**
+- [ ] **Lazy Loading**: Implement lazy loading for large history datasets
+- [ ] **Search Indexing**: Optimize search performance with better indexing
+- [ ] **Memory Management**: Improve memory usage for large history files
+- [ ] **Background Sync**: Automatic background synchronization
+- [ ] **Progressive Web App**: PWA capabilities for standalone use
+
+#### **Accessibility & Internationalization**
+- [ ] **Screen Reader Support**: Enhanced accessibility for visually impaired users
+- [ ] **High Contrast Mode**: Dedicated high contrast theme
+- [ ] **Internationalization**: Multi-language support (i18n)
+- [ ] **Keyboard Navigation**: Full keyboard navigation support
+- [ ] **Voice Commands**: Voice control for hands-free operation
+
+#### **Security & Privacy**
+- [ ] **End-to-End Encryption**: Encrypt sensitive data
+- [ ] **Privacy Controls**: Granular privacy settings and data controls
+- [ ] **Data Anonymization**: Option to anonymize data for analytics
+- [ ] **Audit Log**: Track data access and usage
+- [ ] **GDPR Compliance**: Full GDPR compliance features
+
+### 🎯 **Priority Levels**
+
+#### **High Priority** (Next Release)
+- [ ] Keyboard shortcuts
+- [ ] Search suggestions
+- [ ] Custom themes (light/dark mode)
+- [ ] Export features
+- [ ] Enhanced accessibility
+
+#### **Medium Priority** (Future Releases)
+- [ ] Advanced filters
+- [ ] Smart categories
+- [ ] Offline mode
+- [ ] Cross-browser sync
+- [ ] Performance optimizations
+
+#### **Low Priority** (Long-term)
+- [ ] Voice input
+- [ ] Mobile companion
+- [ ] API integrations
+- [ ] Cloud backup
+- [ ] Internationalization
+
+### 🤝 **Contributing to TODO Items**
+
+We welcome contributions! If you'd like to work on any of these features:
+
+1. **Check the Issues**: Look for existing issues related to the feature
+2. **Create a Proposal**: Open an issue describing your implementation plan
+3. **Follow Guidelines**: Ensure your code follows our coding standards
+4. **Test Thoroughly**: Include tests for new functionality
+5. **Document Changes**: Update documentation for new features
 ---
