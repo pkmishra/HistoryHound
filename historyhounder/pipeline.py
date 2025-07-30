@@ -99,6 +99,20 @@ def extract_and_process_history(
             # Map last_visit_time to visit_time for the search API
             if 'last_visit_time' in metadata:
                 metadata['visit_time'] = metadata['last_visit_time']
+            
+            # Extract domain from URL if not already present
+            if 'domain' not in metadata or not metadata['domain']:
+                url = metadata.get('url', '')
+                if url:
+                    try:
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(url)
+                        metadata['domain'] = parsed_url.netloc
+                    except:
+                        metadata['domain'] = 'unknown'
+                else:
+                    metadata['domain'] = 'unknown'
+            
             metadatas.append(convert_metadata_for_chroma(metadata))
         
         store = ChromaVectorStore(persist_directory=persist_directory)

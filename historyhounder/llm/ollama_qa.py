@@ -231,7 +231,20 @@ def enhance_context_for_qa(documents, metadatas, temporal_filter=None):
     })
     
     for doc, meta in zip(documents, metadatas):
-        domain = meta.get('domain', 'unknown')
+        # Extract domain from URL if not in metadata
+        domain = meta.get('domain', '')
+        if not domain:
+            url = meta.get('url', '')
+            if url:
+                try:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(url)
+                    domain = parsed_url.netloc
+                except:
+                    domain = 'unknown'
+            else:
+                domain = 'unknown'
+        
         visit_count = meta.get('visit_count', 1)
         title = meta.get('title', 'No title')
         url = meta.get('url', '')
@@ -418,12 +431,26 @@ Answer the question directly using this format:
             if documents and metadatas:
                 # Create sources from the actual retrieved documents
                 for i, (doc, meta) in enumerate(zip(documents[:3], metadatas[:3])):  # Limit to top 3 sources
+                    # Extract domain from URL if not in metadata
+                    domain = meta.get('domain', '')
+                    if not domain:
+                        url = meta.get('url', '')
+                        if url:
+                            try:
+                                from urllib.parse import urlparse
+                                parsed_url = urlparse(url)
+                                domain = parsed_url.netloc
+                            except:
+                                domain = 'unknown'
+                        else:
+                            domain = 'unknown'
+                    
                     sources.append(SourceInfo(
                         content=doc[:200] if doc else "",  # First 200 chars as preview
                         url=meta.get('url', ''),
                         title=meta.get('title', ''),
                         visit_time=meta.get('visit_time', ''),
-                        domain=meta.get('domain', '')
+                        domain=domain
                     ))
             else:
                 # Fallback: create basic source info from the answer
