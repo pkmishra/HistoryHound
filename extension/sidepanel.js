@@ -151,8 +151,8 @@ class HistoryHounderSidepanel {
                 </div>
                 <div class="item-url">${this.escapeHtml(item.url)}</div>
                 <div class="item-meta">
-                    <span>${this.formatDate(item.visit_time)}</span>
-                    <span class="item-visits">${item.visit_count} visits</span>
+                    <span>${this.formatDate(item.visit_time || item.lastVisitTime)}</span>
+                    <span class="item-visits">${item.visit_count || item.visitCount || 1} visits</span>
                 </div>
             </div>
         `).join('');

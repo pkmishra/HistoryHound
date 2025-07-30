@@ -388,9 +388,23 @@ class TestServerAPIIntegration:
             assert "answer" in data
             assert len(data["answer"]) > 0
             
-            # Should mention LinkedIn as most visited (578 visits)
+            # STRONG ASSERTION: Should show actual domain names for most visited sites
             answer_lower = data["answer"].lower()
-            assert "linkedin" in answer_lower or "578" in answer_lower or "most visited" in answer_lower
+            
+            # For statistical questions, should NOT show 'unknown' as the answer
+            assert "unknown (unknown)" not in answer_lower, f"Statistical answer should not contain 'unknown (unknown)', got: {data['answer']}"
+            assert not answer_lower.startswith("unknown"), f"Statistical answer should not start with 'unknown', got: {data['answer']}"
+            
+            # Should mention actual domain names - LinkedIn is most visited in test data
+            domain_found = ("linkedin.com" in answer_lower or "linkedin" in answer_lower)
+            visits_found = ("578" in answer_lower or "visit" in answer_lower)
+            
+            # At least one of these should be true for statistical questions about most visited sites
+            assert domain_found or visits_found, f"Expected domain or visit info in statistical answer, got: {data['answer']}"
+            
+            # If it's about "most visited", it should ideally show domain names
+            if "most" in question.lower():
+                assert domain_found, f"Question about 'most visited' should show domain names, got: {data['answer']}"
     
     def test_qa_domain_specific_questions(self, client, comprehensive_history_data):
         """Test Q&A with domain-specific questions."""
@@ -429,9 +443,20 @@ class TestServerAPIIntegration:
             assert "answer" in data
             assert len(data["answer"]) > 0
             
-            # Should mention the domain and visit count
+            # STRONG ASSERTION: Should show actual domain name, not 'unknown'
             answer_lower = data["answer"].lower()
-            assert domain in answer_lower or "visit" in answer_lower
+            
+            # Verify actual domain appears in the answer
+            domain_variants = [f"{domain}.com", domain]
+            domain_found = any(variant in answer_lower for variant in domain_variants)
+            assert domain_found, f"Expected domain '{domain}' or '{domain}.com' in answer, got: {data['answer']}"
+            
+            # Verify no 'unknown' domains in statistical answers
+            assert "unknown (unknown)" not in answer_lower, f"Answer should not contain 'unknown (unknown)', got: {data['answer']}"
+            assert "unknown:" not in answer_lower, f"Answer should not start with 'unknown:', got: {data['answer']}"
+            
+            # Verify visit count information is present
+            assert "visit" in answer_lower, f"Answer should mention visits, got: {data['answer']}"
     
     def test_qa_semantic_questions(self, client, comprehensive_history_data):
         """Test Q&A with semantic questions."""

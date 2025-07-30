@@ -61,6 +61,7 @@ class SearchResult(BaseModel):
     url: str = Field(..., description="Page URL")
     content: str = Field(default="", description="Page content")
     visit_time: Optional[str] = Field(None, description="Visit timestamp")
+    visit_count: int = Field(default=1, description="Number of visits")
     domain: str = Field(default="", description="Domain name")
     distance: float = Field(..., description="Semantic similarity score")
 
@@ -259,8 +260,11 @@ async def search_history(
         # Format results for API
         formatted_results = []
         for result in results:
+            # Extract metadata (semantic_search returns {document, metadata})
+            metadata = result.get('metadata', {})
+            
             # Format visit_time if it exists
-            visit_time = result.get('visit_time', '')
+            visit_time = metadata.get('visit_time', metadata.get('last_visit_time', ''))
             if visit_time:
                 if isinstance(visit_time, datetime):
                     visit_time = visit_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -272,12 +276,22 @@ async def search_history(
                     except:
                         pass  # Keep original if parsing fails
             
+            # Extract domain from metadata or derive from URL
+            domain = metadata.get('domain', '')
+            if not domain and metadata.get('url'):
+                try:
+                    from urllib.parse import urlparse
+                    domain = urlparse(metadata.get('url')).netloc
+                except:
+                    domain = ''
+            
             formatted_results.append(SearchResult(
-                title=result.get('title', 'Untitled'),
-                url=result.get('url', ''),
+                title=metadata.get('title', 'Untitled'),
+                url=metadata.get('url', ''),
                 content=result.get('document', ''),
                 visit_time=visit_time,
-                domain=result.get('domain', ''),
+                visit_count=metadata.get('visit_count', 1),
+                domain=domain,
                 distance=result.get('distance', 0.0)
             ))
         
