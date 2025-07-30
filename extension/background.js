@@ -108,8 +108,8 @@ async function searchHistory(query, filters = {}) {
                 id: item.url, // Use URL as ID
                 url: item.url,
                 title: item.title,
-                lastVisitTime: new Date(item.visit_time).getTime(),
-                visitCount: 1,
+                lastVisitTime: item.visit_time ? new Date(item.visit_time).getTime() : Date.now(),
+                visitCount: item.visit_count || 1,
                 typedCount: 0,
                 domain: item.domain
               }));
