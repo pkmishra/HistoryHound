@@ -379,15 +379,15 @@ async function askQuestion() {
         
         if (response.success) {
             // Replace loading message with actual response
-            updateChatMessage(loadingMessageId, response.answer.answer);
+            updateChatMessage(loadingMessageId, response.answer);
             
             // Add sources if available
-            if (response.answer.sources && response.answer.sources.length > 0) {
+            if (response.sources && response.sources.length > 0) {
                 const sourcesHtml = `
                     <div class="sources-section">
                         <strong>Sources:</strong>
                         <ul>
-                            ${response.answer.sources.map(source => {
+                            ${response.sources.map(source => {
                                 const title = source.title || source.url || 'Untitled';
                                 const url = source.url || '#';
                                 const displayText = title.length > 50 ? title.substring(0, 50) + '...' : title;
