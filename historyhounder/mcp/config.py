@@ -26,17 +26,20 @@ class MCPConfig(BaseModel):
                 "chrome": "~/Library/Application Support/Google/Chrome/Default/History",
                 "firefox": "~/Library/Application Support/Firefox/Profiles/*/places.sqlite",
                 "safari": "~/Library/Safari/History.db",
-                "edge": "~/Library/Application Support/Microsoft Edge/Default/History"
+                "edge": "~/Library/Application Support/Microsoft Edge/Default/History",
+                "brave": "~/Library/Application Support/BraveSoftware/Brave-Browser/Default/History"
             },
             "linux": {  # Linux
                 "chrome": "~/.config/google-chrome/Default/History",
                 "firefox": "~/.mozilla/firefox/*.default*/places.sqlite",
-                "edge": "~/.config/microsoft-edge/Default/History"
+                "edge": "~/.config/microsoft-edge/Default/History",
+                "brave": "~/.config/BraveSoftware/Brave-Browser/Default/History"
             },
             "win32": {  # Windows
                 "chrome": "~/AppData/Local/Google/Chrome/User Data/Default/History",
                 "firefox": "~/AppData/Roaming/Mozilla/Firefox/Profiles/*/places.sqlite",
-                "edge": "~/AppData/Local/Microsoft/Edge/User Data/Default/History"
+                "edge": "~/AppData/Local/Microsoft/Edge/User Data/Default/History",
+                "brave": "~/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/History"
             }
         },
         description="Browser history file paths by platform and browser"
