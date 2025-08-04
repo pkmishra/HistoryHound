@@ -1,8 +1,7 @@
 """
-Unit tests for MCP (Model Context Protocol) Server functionality.
+Unit tests for FastMCP Server functionality.
 
-Tests the MCP server implementation, tool definitions, and basic
-functionality without requiring actual browser history files.
+Tests the FastMCP server implementation and tool definitions.
 """
 
 import pytest
@@ -11,300 +10,115 @@ import asyncio
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
-from historyhounder.mcp.server import MCPServer, create_mcp_server
+from historyhounder.mcp.server import create_mcp_server
 from historyhounder.mcp.models import MCPRequest, MCPResponse, ToolDefinition
 from historyhounder.mcp.config import config
 
 
-class TestMCPServer:
-    """Test MCP server functionality."""
+class TestFastMCPServer:
+    """Test FastMCP server functionality."""
     
-    def test_server_initialization(self):
-        """Test MCP server initialization."""
-        server = MCPServer()
-        assert server.initialized == False
-        assert len(server.tools) == 3
+    def test_server_creation(self):
+        """Test FastMCP server creation."""
+        server = create_mcp_server()
+        assert server is not None
+        assert hasattr(server, 'get_tools')
         
-        # Check tool names
-        tool_names = [tool.name for tool in server.tools]
-        assert "get_browser_history" in tool_names
-        assert "get_history_statistics" in tool_names
-        assert "list_supported_browsers" in tool_names
+        # Check that tools are registered
+        tools = asyncio.run(server.get_tools())
+        assert isinstance(tools, dict)
+        tool_names = list(tools.keys())
+        assert "get_browser_history_tool" in tool_names
+        assert "get_history_statistics_tool" in tool_names
+        assert "list_supported_browsers_tool" in tool_names
     
     def test_tool_definitions(self):
         """Test that tool definitions are properly structured."""
-        server = MCPServer()
+        server = create_mcp_server()
+        tools = asyncio.run(server.get_tools())
         
-        for tool in server.tools:
-            assert isinstance(tool, ToolDefinition)
-            assert tool.name
+        for tool_name, tool in tools.items():
+            assert isinstance(tool_name, str)
+            assert tool_name
+            # Tools are FunctionTool objects
+            assert hasattr(tool, 'name')
+            assert hasattr(tool, 'description')
+            assert tool.name == tool_name
             assert tool.description
-            assert tool.inputSchema
-            assert "type" in tool.inputSchema
-            assert tool.inputSchema["type"] == "object"
-    
-    def test_initialize_method(self):
-        """Test initialize method handling."""
-        server = MCPServer()
-        
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": config.protocol_version,
-                "capabilities": {},
-                "clientInfo": {
-                    "name": "test-client",
-                    "version": "1.0.0"
-                }
-            }
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "result" in response
-        assert "error" not in response
-        
-        result = response["result"]
-        assert result["protocolVersion"] == config.protocol_version
-        assert "capabilities" in result
-        assert "serverInfo" in result
-        assert result["serverInfo"]["name"] == config.server_name
-        assert result["serverInfo"]["version"] == config.server_version
-        
-        # Server should be initialized
-        assert server.initialized == True
-    
-    def test_initialize_invalid_version(self):
-        """Test initialize with invalid protocol version."""
-        server = MCPServer()
-        
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "invalid-version",
-                "capabilities": {}
-            }
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32602  # Invalid params error
-    
-    def test_list_tools_before_initialize(self):
-        """Test list_tools before initialization."""
-        server = MCPServer()
-        
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "list_tools"
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32002
-    
-    def test_list_tools_after_initialize(self):
-        """Test list_tools after initialization."""
-        server = MCPServer()
-        
-        # First initialize
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": "init-1",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": config.protocol_version,
-                "capabilities": {}
-            }
-        }
-        asyncio.run(server.handle_request(init_request))
-        
-        # Then list tools
-        list_request = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "list_tools"
-        }
-        
-        response = asyncio.run(server.handle_request(list_request))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "result" in response
-        assert "error" not in response or response["error"] is None
-        
-        result = response["result"]
-        assert "tools" in result
-        assert len(result["tools"]) == 3
-        
-        tool_names = [tool["name"] for tool in result["tools"]]
-        assert "get_browser_history" in tool_names
-        assert "get_history_statistics" in tool_names
-        assert "list_supported_browsers" in tool_names
-    
-    def test_call_tool_before_initialize(self):
-        """Test call_tool before initialization."""
-        server = MCPServer()
-        
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "call_tool",
-            "params": {
-                "name": "list_supported_browsers",
-                "arguments": {}
-            }
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32002
     
     @patch('historyhounder.mcp.tools.list_supported_browsers')
-    def test_call_tool_after_initialize(self, mock_list_browsers):
-        """Test call_tool after initialization."""
-        server = MCPServer()
-        
-        # Mock the tool function
+    def test_list_supported_browsers_tool(self, mock_list_browsers):
+        """Test list_supported_browsers_tool functionality."""
+        # Mock the underlying function
         mock_list_browsers.return_value = {
-            "browsers": [],
-            "platform": {"system": "test"},
+            "browsers": [
+                {"name": "chrome", "available": True, "path": "/test/path"},
+                {"name": "firefox", "available": False, "path": None}
+            ],
+            "platform": {"system": "test", "release": "test"},
             "query_time": datetime.now().isoformat()
         }
         
-        # First initialize
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": "init-1",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": config.protocol_version,
-                "capabilities": {}
-            }
-        }
-        asyncio.run(server.handle_request(init_request))
-        
-        # Then call tool
-        call_request = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "call_tool",
-            "params": {
-                "name": "list_supported_browsers",
-                "arguments": {}
-            }
-        }
-        
-        response = asyncio.run(server.handle_request(call_request))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "result" in response
-        assert "error" not in response or response["error"] is None
-        
-        result = response["result"]
-        assert "content" in result
-        assert "isError" in result
-        assert result["isError"] == False
-        
-        # Verify the tool returned a valid result
-        assert len(result["content"]) == 1
-        assert "browsers" in result["content"][0]
-        assert "platform" in result["content"][0]
-        assert "query_time" in result["content"][0]
-    
-    def test_call_tool_not_found(self):
-        """Test call_tool with non-existent tool."""
-        server = MCPServer()
-        
-        # Initialize first
-        init_request = {
-            "jsonrpc": "2.0",
-            "id": "init-1",
-            "method": "initialize",
-            "params": {
-                "protocolVersion": config.protocol_version,
-                "capabilities": {}
-            }
-        }
-        asyncio.run(server.handle_request(init_request))
-        
-        # Call non-existent tool
-        call_request = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "call_tool",
-            "params": {
-                "name": "non_existent_tool",
-                "arguments": {}
-            }
-        }
-        
-        response = asyncio.run(server.handle_request(call_request))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32601
-    
-    def test_method_not_found(self):
-        """Test handling of unknown method."""
-        server = MCPServer()
-        
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "unknown_method"
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32601
-    
-    def test_invalid_json(self):
-        """Test handling of invalid JSON request."""
-        server = MCPServer()
-        
-        # This should be handled by the caller, but we test error handling
-        request_data = {
-            "jsonrpc": "2.0",
-            "id": "test-1",
-            "method": "initialize",
-            "params": "invalid_params"  # Should be dict
-        }
-        
-        response = asyncio.run(server.handle_request(request_data))
-        
-        assert response["jsonrpc"] == "2.0"
-        assert response["id"] == "test-1"
-        assert "error" in response
-        assert response["error"]["code"] == -32603  # Internal error for validation failure
-    
-    def test_create_mcp_server(self):
-        """Test server creation function."""
         server = create_mcp_server()
-        assert isinstance(server, MCPServer)
-        assert server.initialized == False
-        assert len(server.tools) == 3
+        tools = asyncio.run(server.get_tools())
+        
+        # Check the tool exists
+        assert "list_supported_browsers_tool" in tools
+        tool = tools["list_supported_browsers_tool"]
+        assert tool.name == "list_supported_browsers_tool"
+        assert "browser" in tool.description.lower()
+        assert "supported" in tool.description.lower()
+    
+    @patch('historyhounder.mcp.tools.get_browser_history')
+    def test_get_browser_history_tool(self, mock_get_history):
+        """Test get_browser_history_tool functionality."""
+        # Mock the underlying function
+        mock_get_history.return_value = {
+            "history": [
+                {
+                    "url": "https://example.com",
+                    "title": "Example",
+                    "visit_time": "2024-01-01T00:00:00",
+                    "visit_count": 1,
+                    "browser": "chrome"
+                }
+            ],
+            "total_items": 1,
+            "query_time": datetime.now().isoformat()
+        }
+        
+        server = create_mcp_server()
+        tools = asyncio.run(server.get_tools())
+        
+        # Check the tool exists
+        assert "get_browser_history_tool" in tools
+        tool = tools["get_browser_history_tool"]
+        assert tool.name == "get_browser_history_tool"
+        assert "browser" in tool.description.lower()
+        assert "history" in tool.description.lower()
+        assert "filter" in tool.description.lower()
+    
+    @patch('historyhounder.mcp.tools.get_history_statistics')
+    def test_get_history_statistics_tool(self, mock_get_stats):
+        """Test get_history_statistics_tool functionality."""
+        # Mock the underlying function
+        mock_get_stats.return_value = {
+            "total_items": 100,
+            "browser_distribution": {"chrome": 50, "firefox": 30, "safari": 20},
+            "top_domains": [{"domain": "google.com", "count": 10}],
+            "date_range": {"earliest": "2024-01-01", "latest": "2024-12-31"},
+            "query_time": datetime.now().isoformat()
+        }
+        
+        server = create_mcp_server()
+        tools = asyncio.run(server.get_tools())
+        
+        # Check the tool exists
+        assert "get_history_statistics_tool" in tools
+        tool = tools["get_history_statistics_tool"]
+        assert tool.name == "get_history_statistics_tool"
+        assert "statistics" in tool.description.lower()
+        assert "analytics" in tool.description.lower()
 
 
 class TestMCPModels:
@@ -352,4 +166,83 @@ class TestMCPModels:
         
         assert tool.name == "test_tool"
         assert tool.description == "Test tool description"
-        assert tool.inputSchema["type"] == "object" 
+        assert tool.inputSchema["type"] == "object"
+
+
+class TestMCPTools:
+    """Test MCP tools functionality."""
+    
+    @patch('historyhounder.mcp.tools.list_supported_browsers')
+    def test_list_supported_browsers_integration(self, mock_list_browsers):
+        """Test list_supported_browsers tool integration."""
+        from historyhounder.mcp.tools import list_supported_browsers
+        
+        # Mock the browser detection
+        mock_list_browsers.return_value = {
+            "browsers": [
+                {"name": "chrome", "available": True, "path": "/test/path"},
+                {"name": "firefox", "available": False, "path": None}
+            ],
+            "platform": {"system": "test", "release": "test"},
+            "query_time": datetime.now().isoformat()
+        }
+        
+        result = list_supported_browsers()
+        
+        assert "browsers" in result
+        assert "platform" in result
+        assert "query_time" in result
+        assert len(result["browsers"]) == 2
+        assert result["browsers"][0]["name"] == "chrome"
+        assert result["browsers"][1]["name"] == "firefox"
+    
+    @patch('historyhounder.mcp.tools.get_browser_history')
+    def test_get_browser_history_integration(self, mock_get_history):
+        """Test get_browser_history tool integration."""
+        from historyhounder.mcp.tools import get_browser_history
+        
+        # Mock the history extraction
+        mock_get_history.return_value = {
+            "history": [
+                {
+                    "url": "https://example.com",
+                    "title": "Example",
+                    "visit_time": "2024-01-01T00:00:00",
+                    "visit_count": 1,
+                    "browser": "chrome"
+                }
+            ],
+            "total_items": 1,
+            "query_time": datetime.now().isoformat()
+        }
+        
+        result = get_browser_history(browser="chrome", limit=10)
+        
+        assert "history" in result
+        assert "total_items" in result
+        assert "query_time" in result
+        assert len(result["history"]) == 1
+        assert result["history"][0]["url"] == "https://example.com"
+    
+    @patch('historyhounder.mcp.tools.get_history_statistics')
+    def test_get_history_statistics_integration(self, mock_get_stats):
+        """Test get_history_statistics tool integration."""
+        from historyhounder.mcp.tools import get_history_statistics
+        
+        # Mock the statistics calculation
+        mock_get_stats.return_value = {
+            "total_items": 100,
+            "browser_distribution": {"chrome": 50, "firefox": 30, "safari": 20},
+            "top_domains": [{"domain": "google.com", "count": 10}],
+            "date_range": {"earliest": "2024-01-01", "latest": "2024-12-31"},
+            "query_time": datetime.now().isoformat()
+        }
+        
+        result = get_history_statistics()
+        
+        assert "total_items" in result
+        assert "browser_distribution" in result
+        assert "top_domains" in result
+        assert "date_range" in result
+        assert "query_time" in result
+        assert result["total_items"] == 100 

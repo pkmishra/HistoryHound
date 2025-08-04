@@ -74,6 +74,8 @@ Examples:
     mcp_parser.add_argument('--port', type=int, default=8081, help='Port to run MCP server on')
     mcp_parser.add_argument('--host', type=str, default='localhost', help='Host to bind MCP server to')
     
+
+    
     # List browsers command
     browsers_parser = subparsers.add_parser('browsers', help='List available browsers')
     
@@ -88,6 +90,7 @@ Examples:
             handle_server(args)
         elif args.command == 'mcp-server':
             handle_mcp_server(args)
+
         elif not DEPENDENCIES_AVAILABLE:
             print("❌ Other commands require additional dependencies")
             print("Please install: pip install beautifulsoup4 sentence-transformers chromadb instructor")
@@ -258,41 +261,30 @@ def handle_browsers(args):
 
 def handle_mcp_server(args):
     """Handle MCP server command"""
-    print("🚀 Starting HistoryHounder MCP Server...")
-    print(f"📍 MCP Server will be available at: ws://{args.host}:{args.port}")
+    print("🚀 Starting HistoryHounder FastMCP Server...")
+    print(f"📍 FastMCP Server will be available at: http://{args.host}:{args.port}/mcp/")
     print("🤖 AI models can connect to this server for browser history access")
-    print("📖 Available MCP Tools:")
-    print("   get_browser_history     - Retrieve browser history with filtering")
-    print("   get_history_statistics  - Get history statistics and analytics")
-    print("   list_supported_browsers - List available browsers and their status")
+    print("📖 Available FastMCP Tools:")
+    print("   get_browser_history_tool     - Retrieve browser history with filtering")
+    print("   get_history_statistics_tool  - Get history statistics and analytics")
+    print("   list_supported_browsers_tool - List available browsers and their status")
     print("\nPress Ctrl+C to stop the server")
     
     try:
         import asyncio
-        import websockets
-        from historyhounder.mcp.server import create_websocket_server
+        from historyhounder.mcp.server import create_mcp_server
         
-        # Create WebSocket server
-        mcp_server = create_websocket_server()
+        # Create FastMCP server
+        mcp_server = create_mcp_server()
         
-        # Start WebSocket server
-        async def run_server():
-            async with websockets.serve(
-                mcp_server.handle_websocket,
-                args.host,
-                args.port
-            ) as server:
-                print(f"✅ MCP Server started on ws://{args.host}:{args.port}")
-                await asyncio.Future()  # Run forever
-        
-        # Run the server
-        asyncio.run(run_server())
+        # Start FastMCP server
+        asyncio.run(mcp_server.run_http_async(host=args.host, port=args.port))
         
     except ImportError as e:
-        print(f"❌ MCP Server requires additional dependencies: {e}")
-        print("Please install: pip install websockets")
+        print(f"❌ FastMCP Server requires additional dependencies: {e}")
+        print("Please install: pip install fastmcp")
     except Exception as e:
-        print(f"❌ Failed to start MCP server: {e}")
+        print(f"❌ Failed to start FastMCP server: {e}")
 
 
 if __name__ == "__main__":

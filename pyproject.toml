@@ -21,6 +21,7 @@ dependencies = [
     "yt-dlp",
     "instructor",
     "websockets>=15.0.1",
+    "fastmcp>=2.11.0",
 ]
 
 [tool.uv]
