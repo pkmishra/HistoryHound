@@ -14,12 +14,13 @@ dependencies = [
     "mock",
     "pytest",
     "requests",
-    "readability-lxml", 
+    "readability-lxml",
     "beautifulsoup4",
     "sentence-transformers",
     "chromadb",
     "yt-dlp",
     "instructor",
+    "websockets>=15.0.1",
 ]
 
 [tool.uv]
