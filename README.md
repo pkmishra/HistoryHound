@@ -50,6 +50,84 @@ uv run python your_script.py
 - **Web Interface**: Easy-to-use browser extension for querying your history
 - **REST API**: FastAPI backend following OpenAPI specification with proper error handling
 - **Comprehensive Testing**: Full test suite with integration tests (no mocking approach) and complete workspace isolation
+- **MCP Server**: Model Context Protocol server for AI model integration with cross-platform browser support
+
+## MCP Server for AI Model Integration
+
+HistoryHounder includes a **Model Context Protocol (MCP) server** that allows AI models to directly access browser history data through a standardized interface.
+
+### **MCP Server Features**
+
+- **Cross-Platform Browser Support**: Chrome, Firefox, Safari, Edge, Brave
+- **Real-Time Data Access**: Direct access to browser history databases
+- **Standardized Protocol**: MCP 1.12.3 compliant with FastMCP 2.11.0
+- **Filtering Capabilities**: Date ranges, domains, visit counts, browser-specific filtering
+- **AI Model Integration**: Tools for AI models to access browser context
+
+### **Available MCP Tools**
+
+1. **`get_browser_history_tool`**: Retrieve browser history with filtering
+   - Filter by browser (chrome, firefox, safari, edge, brave)
+   - Filter by date range (start_date, end_date)
+   - Filter by domain
+   - Limit results (default: 100 items)
+
+2. **`get_history_statistics_tool`**: Get analytics and statistics
+   - Total history items across all browsers
+   - Browser distribution
+   - Date ranges
+   - Query performance metrics
+
+3. **`list_supported_browsers_tool`**: Check available browsers
+   - Cross-platform browser detection
+   - Accessibility status
+   - Path information
+
+### **Starting the MCP Server**
+
+```bash
+# Start MCP server on default port (8081)
+uv run python -m historyhounder.cli mcp-server
+
+# Start on custom port
+uv run python -m historyhounder.cli mcp-server --port 8087
+
+# Start on specific host and port
+uv run python -m historyhounder.cli mcp-server --host 0.0.0.0 --port 8087
+```
+
+### **AI Model Integration Examples**
+
+#### **Claude with Browser Context**
+```python
+# AI model can call our tools to get browser history
+history_data = mcp_client.call_tool("get_browser_history_tool", {
+    "browser": "firefox",
+    "limit": 10,
+    "start_date": "2025-08-01T00:00:00"
+})
+```
+
+#### **GPT with Browsing Analytics**
+```python
+# AI model can analyze browsing patterns
+stats = mcp_client.call_tool("get_history_statistics_tool", {})
+# AI can then provide insights about browsing habits
+```
+
+### **Use Cases**
+
+- **AI Assistants**: Provide context-aware responses based on user's browsing history
+- **Productivity Tools**: Analyze browsing patterns for time management insights
+- **Research Assistants**: Help users find previously visited resources
+- **Automation**: AI-powered workflows that need browser history context
+
+### **Privacy & Security**
+
+- **Local Processing**: All data processing happens locally
+- **No Data Transmission**: Browser history never leaves your machine
+- **Secure Access**: Direct database access with proper validation
+- **Cross-Platform**: Works on Windows, macOS, and Linux
 
 ## Architecture
 
@@ -63,6 +141,7 @@ uv run python your_script.py
 6. **Web Server** (`server.py`): FastAPI backend with configurable database directories
 7. **Browser Extension** (`extension/`): Chrome extension for user interface
 8. **Database Isolation** (`conftest.py`, environment variables): Complete test isolation system
+9. **MCP Server** (`mcp/`): Model Context Protocol server for AI model integration with cross-platform browser support
 
 ### Data Flow
 
@@ -124,6 +203,15 @@ This project follows a **comprehensive testing and integration** approach:
   - Simple setup and management
   - Active development
   - Direct integration with Instructor for structured output
+
+#### **FastMCP (Model Context Protocol)**
+- **Rationale**: Production-ready MCP framework for AI model integration
+- **Benefits**:
+  - Standardized protocol for AI model communication
+  - Built-in authentication and deployment features
+  - 90% less boilerplate compared to custom implementations
+  - Official MCP ecosystem integration
+  - Cross-platform browser history access for AI models
 
 ### Content Extraction Technologies
 
