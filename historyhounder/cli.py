@@ -69,6 +69,13 @@ Examples:
     server_parser.add_argument('--port', type=int, default=8080, help='Port to run server on')
     server_parser.add_argument('--host', type=str, default='localhost', help='Host to bind server to')
     
+    # MCP Server command
+    mcp_parser = subparsers.add_parser('mcp-server', help='Start MCP server for AI model access')
+    mcp_parser.add_argument('--port', type=int, default=8081, help='Port to run MCP server on')
+    mcp_parser.add_argument('--host', type=str, default='localhost', help='Host to bind MCP server to')
+    
+
+    
     # List browsers command
     browsers_parser = subparsers.add_parser('browsers', help='List available browsers')
     
@@ -81,6 +88,9 @@ Examples:
     try:
         if args.command == 'server':
             handle_server(args)
+        elif args.command == 'mcp-server':
+            handle_mcp_server(args)
+
         elif not DEPENDENCIES_AVAILABLE:
             print("❌ Other commands require additional dependencies")
             print("Please install: pip install beautifulsoup4 sentence-transformers chromadb instructor")
@@ -247,6 +257,34 @@ def handle_browsers(args):
             print(f"✅ {browser_name}: {browser_info.get('path', 'Path not found')}")
         else:
             print(f"❌ {browser_name}: Not available")
+
+
+def handle_mcp_server(args):
+    """Handle MCP server command"""
+    print("🚀 Starting HistoryHounder FastMCP Server...")
+    print(f"📍 FastMCP Server will be available at: http://{args.host}:{args.port}/mcp/")
+    print("🤖 AI models can connect to this server for browser history access")
+    print("📖 Available FastMCP Tools:")
+    print("   get_browser_history_tool     - Retrieve browser history with filtering")
+    print("   get_history_statistics_tool  - Get history statistics and analytics")
+    print("   list_supported_browsers_tool - List available browsers and their status")
+    print("\nPress Ctrl+C to stop the server")
+    
+    try:
+        import asyncio
+        from historyhounder.mcp.server import create_mcp_server
+        
+        # Create FastMCP server
+        mcp_server = create_mcp_server()
+        
+        # Start FastMCP server
+        asyncio.run(mcp_server.run_http_async(host=args.host, port=args.port))
+        
+    except ImportError as e:
+        print(f"❌ FastMCP Server requires additional dependencies: {e}")
+        print("Please install: pip install fastmcp")
+    except Exception as e:
+        print(f"❌ Failed to start FastMCP server: {e}")
 
 
 if __name__ == "__main__":
