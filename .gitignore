@@ -85,6 +85,9 @@ logs/
 *.temp
 .tmp/
 
+# tmp directory (local planning and development files)
+tmp/
+
 # Documentation build
 docs/_build/
 
